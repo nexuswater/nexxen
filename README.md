@@ -49,3 +49,6 @@ Earlier specification checklists describe live acceptance goals, **not completed
 
 ### Public SDK preparation
 Exact inspected endpoint schemas, deployment snapshot and remaining team inputs are mapped in [AP4M public integration](AP4M-PUBLIC-INTEGRATION.md). Disabled preparation helpers produce channel-request descriptors, narrow voucher data and redemption ABI call plans only; no signing or broadcast. A personalized starter is not required for that public integration information.
+
+### AP4M receipt → real Marqeta sandbox API code (not connected)
+[Public-sandbox adapter](MARQETA-SANDBOX.md) implements documented user/card/GPA-load/authorization-simulation API shapes. [Durable payout gate](PAYOUT-SANDBOX-GATE.md) prevents replay and requires canonical payout plus independently linked claim evidence and approved reserved scope before a sandbox load. Credentials, actual account access and a verified AP4M claim resolver are still unavailable; all new checks use mocks. Production program approval is not a public-sandbox prerequisite. Conversion remains simulated; no RLUSD is forwarded to Marqeta and no live dashboard integration was activated.
