@@ -1,6 +1,6 @@
 # Marqeta sandbox adapter — implemented, not connected
 
-`adapters/marqeta-sandbox.mjs` implements narrow public-sandbox operations with mocked tests. No provider API was called during implementation. Account access/credentials remain unavailable; signup previously returned HTTP403. Do not bypass access restrictions or paste credentials into chat.
+`adapters/marqeta-sandbox.mjs` implements narrow public-sandbox operations with mocked tests. No provider API was called during implementation. The user reports that their Marqeta account, 2FA and sandbox now exist in their own browser. No credentials have been captured or configured in this runtime. Cloud-browser access previously returned HTTP403. Do not bypass access restrictions or paste credentials into chat.
 
 **Production bank/network program approval is not required merely to test the public sandbox.** Production launch is separate. The public quick start supports creating sandbox users/cards, loading a GPA from sandbox program funding and simulating an authorization. This does not mean Marqeta accepts RLUSD, receives AP4M testnet funds, converts currencies, or issues a spendable production card.
 
@@ -41,3 +41,36 @@ Authorization success means only a sandbox authorization. It always reports `set
 - [Official Marqeta OpenAPI CoreAPI.yaml](https://raw.githubusercontent.com/marqeta/marqeta-openapi/main/yaml/CoreAPI.yaml), version 3.0.39: `gpa_request` includes optional 1–36 character `token`; `gpa_response` identity/amount/state/response fields; POST409 description and GET resource reconciliation. Individual generated reference pages returned cache misses, so the official public schema was used—not an authenticated endpoint bypass.
 
 Tests use injected fake HTTP responses; they are not live sandbox evidence.
+
+
+## User-local read-only connection setup (Node 24+)
+
+Only after the user approves storing credentials locally and making this read-only check, run these steps **in the cloned project directory on the user's authorized machine**. The assistant has not run them, accessed the Mac or created a secret file.
+
+1. Create a private local file **without overwriting an existing one**:
+   ```sh
+   [ -e .env.local ] || (umask 077; cp .env.example .env.local)
+   chmod 600 .env.local
+   ```
+2. Open `.env.local` privately in a local editor, not chat/screenshare. Set:
+   ```dotenv
+   MARQETA_SANDBOX_READ_ENABLED=true
+   MARQETA_SANDBOX_BASE_URL=https://sandbox-api.marqeta.com/v3
+   MARQETA_APPLICATION_TOKEN=<applicationToken from your sandbox>
+   MARQETA_ADMIN_ACCESS_TOKEN=<adminAccessToken from your sandbox>
+   ```
+   Replace placeholders locally. Do not put credentials in shell command arguments, chat, screenshots or Git. `.env.local` is **plaintext, not encrypted**; mode600 restricts filesystem access. It is gitignored, but ignore rules are not a security boundary. Exclude it and all other secret `.env*` files from manual ZIP/upload operations; only `.env.example` belongs in source delivery.
+3. Run the explicit native env loader:
+   ```sh
+   node --env-file=.env.local scripts/sandbox-check.mjs
+   ```
+   Or, if credentials were already provided through an approved runtime environment/secret mechanism, use:
+   ```sh
+   npm run sandbox:check
+   ```
+
+The npm command reads **process environment only**; it does not automatically load any dotenv file. The explicit `--env-file` command loads exactly the named local file. `npm start` is unchanged: local simulation only, no implicit Marqeta connection or mutations.
+
+The check uses one **GET `/cardproducts`** with Basic auth, pinned public-sandbox host, no redirects, no retries and a 15-second timeout. It prints only connection status and returned/active product counts—not credential values, product names/tokens, PAN/CVV or provider bodies. Read access is separately authorized by `MARQETA_SANDBOX_READ_ENABLED`; it does **not** set `approvedSandboxOperations`, create a user/card, load funds or authorize a charge.
+
+A successful check means only that the sandbox catalog read worked. It does not verify a non-JIT product, AP4M funding, issuer authorization, settlement or GPU delivery. On HTTP401/403, stop and check assigned sandbox access/credentials in the official dashboard; do not bypass restrictions. If the assigned API URL differs from the pinned URL above, stop for explicit adapter review—do not change a hostname allowlist casually. Share only sanitized check output if help is needed.

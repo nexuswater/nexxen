@@ -24,3 +24,7 @@ coverage/
 data/
 *.sqlite*
 node_modules/
+
+# Local runtime credentials: never include in source archives
+.env.local
+.env.*.local
