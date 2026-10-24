@@ -1,0 +1,58 @@
+{
+  "name": "nexxen",
+  "version": "0.1.0",
+  "private": true,
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@openuidev/lang-core",
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
+    ]
+  },
+  "scripts": {
+    "generate": "openui generate src/lib/library.ts --spec --out src/generated/spec.json",
+    "predev": "npm run generate",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "deploy": "openui deploy",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "merchants": "node scripts/merchants.mjs",
+    "ap4m:wallets": "node scripts/ap4m-wallets.mjs",
+    "ap4m:import-key": "node scripts/import-agent-key.mjs"
+  },
+  "dependencies": {
+    "@ai-sdk/amazon-bedrock": "^5.0.124",
+    "@ai-sdk/anthropic": "^4.0.88",
+    "@ai-sdk/google": "^4.0.105",
+    "@ai-sdk/openai": "^4.0.102",
+    "@ai-sdk/openai-compatible": "^3.0.78",
+    "@ap4m/sdk": "https://hackathon.ap4m.build/sdk/ap4m-sdk.tgz",
+    "@openuidev/lang-core": "1.0.1",
+    "@openuidev/react-lang": "^1.0.1",
+    "@openuidev/react-ui": "^0.18.1",
+    "ai": "^7.0.153",
+    "ai-sdk-provider-claude-code": "^4.3.3",
+    "ethers": "6.17.0",
+    "next": "^16.3.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@openuidev/cli": "0.6.0",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.0",
+    "typescript": "^5"
+  },
+  "allowScripts": {
+    "@openuidev/lang-core": true,
+    "sharp": true,
+    "unrs-resolver": true
+  }
+}
