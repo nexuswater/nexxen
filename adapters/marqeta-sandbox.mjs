@@ -41,10 +41,12 @@ export class MarqetaSandboxAdapter {
  async getLoad(operationToken){const result=await this.#request('GET','/gpaorders/'+token(operationToken),undefined,{notFound:true});if(result===null)return {found:false,token:operationToken,sandboxOnly:true};const clean=cleanLoad(result);if(clean.token!==operationToken)fail('LOAD_RESPONSE_MISMATCH_RECONCILE');const verified=clean.state==='COMPLETION'&&clean.responseCode==='0000'&&clean.currency==='USD'&&clean.fundingSourceToken==='sandbox_program_funding';return {...clean,found:true,confirmed:verified,verified};}
  async authorizeSimulation({cardToken,amountUsd,merchantId,network}){
   this.#require(true);if(token(cardToken)!==this.#config.cardToken||merchantId!==this.#config.merchantId||network!==this.#config.network||!['VISA','MASTERCARD','DISCOVER'].includes(network))fail('UNAPPROVED_SIMULATION_SCOPE');
-  const amount=this.#amount(amountUsd);const response=await this.#request('POST','/simulations/cardtransactions/authorization',{amount,card_token:cardToken,card_acceptor:{mid:merchantId},network},{funding:true});
-  const rows=Array.isArray(response.transactions)?response.transactions:[response];
-  const matches=rows.filter(t=>t.card_token===cardToken&&t.card_acceptor?.mid===merchantId&&usd(t.amount)===amount&&t.currency_code==='USD'&&t.type==='authorization');
-  if(matches.length!==1)fail('AUTH_RESPONSE_UNVERIFIED_RECONCILE');const t=matches[0];
-  return {transactionToken:token(t.token),cardToken,amountUsd:amount,currencyCode:'USD',state:state(t.state),responseCode:code(t.response?.code),approved:t.response?.code==='0000'&&t.state==='PENDING',sandboxOnly:true,settlementVerified:false,gpuDeliveryVerified:false};
+  const amount=this.#amount(amountUsd);const response=await this.#request('POST','/simulations/cardtransactions/authorization',{amount:Number(amount),currency_code:'USD',card_token:cardToken,card_acceptor:{mid:merchantId},network},{funding:true});
+  const t=response?.transaction;
+  const sameMid=(actual,expected)=>typeof actual==='string'&&typeof expected==='string'&&(actual===expected||(/^\d+$/.test(actual)&&/^\d+$/.test(expected)&&actual.replace(/^0+(?=\d)/,'')===expected.replace(/^0+(?=\d)/,'')));
+  if(!t||t.card_token!==cardToken||!sameMid(t.card_acceptor?.mid,merchantId)||t.currency_code!=='USD'||t.type!=='authorization'||t.network!==network||(this.#config.userToken!==undefined&&t.user_token!==this.#config.userToken))fail('AUTH_RESPONSE_UNVERIFIED_RECONCILE');
+  let actualAmount;try{actualAmount=usd(t.amount);}catch{fail('AUTH_RESPONSE_UNVERIFIED_RECONCILE');}
+  if(actualAmount!==amount)fail('AUTH_RESPONSE_UNVERIFIED_RECONCILE');
+  return {transactionToken:token(t.token),cardToken,amountUsd:amount,currencyCode:'USD',network,state:state(t.state),responseCode:code(t.response?.code),approved:t.response?.code==='0000'&&t.state==='PENDING',sandboxOnly:true,settlementVerified:false,gpuDeliveryVerified:false};
  }
 }
