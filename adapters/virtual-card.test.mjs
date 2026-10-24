@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {VirtualCardAdapter} from './virtual-card.mjs';
+test('virtual-card interface stays unavailable even with config flags; no invented issuance',async()=>{for(const config of [{},{credentialConfigured:true,programApproved:true,verifiedApiContract:true}]){const a=new VirtualCardAdapter(config);assert.equal(a.status().mode,'unavailable');await assert.rejects(a.requestVirtualCard(),/Unavailable/);await assert.rejects(a.authorizePurchase(),/Unavailable/);await assert.rejects(a.reconcile(),/Unavailable/);}});
