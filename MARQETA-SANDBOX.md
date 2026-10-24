@@ -86,6 +86,25 @@ No reinstall is needed: place the standalone `scripts/sandbox-inspect-products.m
 node --env-file=.env.local scripts/sandbox-inspect-products.mjs
 ```
 
-This performs only GET `/cardproducts`, using the existing private environment file. It emits product token/name, active state and the documented `config.jit_funding` enabled flags for payment-card, program and program-gateway funding, plus gateway `always_fund`. Funding-source identities and gateway credentials are omitted; only their presence is reported. Missing/invalid booleans stay `null`, not assumed defaults. Three explicitly false enabled flags, without contradictory gateway funding, establish `productNonJitConfigured:true` at **product level only**. Card overrides/effective configuration remain unchecked, and the script never sets runtime mutation or non-JIT approval flags. No POST, card creation, load or authorization is performed.
+This performs only GET `/cardproducts`, using the existing private environment file. It emits product token/name, active state and the documented `config.jit_funding` enabled flags for payment-card, program and program-gateway funding, plus gateway `always_fund`. Funding-source identities and gateway credentials are omitted; only their presence is reported. Missing/invalid booleans stay `null`, not assumed defaults. Three explicitly false enabled flags establish `productNonJitConfigured:true` at **product level only**. Card overrides/effective configuration remain unchecked, and the script never sets runtime mutation or non-JIT approval flags. No POST, card creation, load or authorization is performed.
 
 The paths are verified in the [official OpenAPI schema](https://raw.githubusercontent.com/marqeta/marqeta-openapi/main/yaml/CoreAPI.yaml) (`jit_funding_*_funding_source` schemas). If fields are absent, review the selected product detail rather than concluding automatic funding is disabled.
+
+
+## Preview-first dedicated sandbox setup
+
+The user reported that the default active Reloadable Card product has program JIT enabled. The disabled program-gateway's `always_fund:true` is an inactive setting, not itself a contradiction; the official create-product response example includes that combination. Do **not** modify the default product.
+
+Download/unzip the standalone setup bundle and, from the existing project directory, preview:
+
+```sh
+node --env-file=.env.local ~/Downloads/nexxen-sandbox-setup.mjs
+```
+
+Preview performs no network calls or file writes. It shows exactly one dedicated `NEXXEN Sandbox Non-JIT` virtual-card product with all JIT sources disabled, one named fixture user and one test card linked to them. Exact documented resource tokens are stable, not credentials. Virtual fulfillment avoids physical shipment. The schema-supported payload remains subject to actual sandbox/program validation; no successful creation is assumed.
+
+Only after explicit approval of **those three sandbox creations**, the script permits `--apply --approve-create-product-user-card`. No default-product update, funding, card authorization, GPU purchase, or production operation is included. Existing `.env.local` supplies credentials privately; do not re-enter secrets in chat.
+
+Before any POST, planned payloads/resource tokens and dispatch status are saved to `data/nexxen-sandbox-setup.json`, mode600, under an exclusive lock. This directory is already gitignored. The script first GETs each exact resource token, reuses only matching resources, and never creates another card after an unknown outcome. Use `--reconcile` for GET-only recovery; 404 after an uncertain POST remains unresolved. Do not delete state to force retries. If a stale lock is reported, stop and verify the earlier process has exited before manual recovery. No raw provider response, PAN/CVV or API credentials is saved or printed. Network identity and effective card funding behavior remain unverified unless separately checked.
+
+Verified source shapes: [create card product](https://www.marqeta.com/docs/core-api/card-products/create-card-product), [create user](https://www.marqeta.com/docs/core-api/users/create-user), [create card](https://www.marqeta.com/docs/core-api/cards/create-card), and the official OpenAPI schema linked above. Tests cover preview/no-I/O, explicit approval, pre-POST persistence, secret redaction, exact-resource reuse and unknown-outcome reconciliation. No actual API setup was run by this builder.
