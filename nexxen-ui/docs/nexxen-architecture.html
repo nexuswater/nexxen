@@ -1,0 +1,425 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>NEXXEN Payment Architecture</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: a single reading column (max 1240px) of figures, each followed by the facts it depends on; cool paper, ink, Mastercard red/orange reserved for money. */
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --fg: #141821; --muted: #5b6474; --line: #d6dbe3; --line-soft: #e8ebf0;
+    --accent: #d8122a; --money: #c2410c; --money-soft: #fff1e6; --ok: #15803d; --ok-soft: #e9f7ee; --chip: #eef1f5;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif; --mono: "IBM Plex Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0f1218; --panel: #171b24; --fg: #e8ebf1; --muted: #9aa4b5; --line: #2b3240; --line-soft: #222835;
+    --accent: #ff5a6a; --money: #f5a524; --money-soft: #2a1f12; --ok: #4ade80; --ok-soft: #122619; --chip: #202633; color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #0f1218; --panel: #171b24; --fg: #e8ebf1; --muted: #9aa4b5; --line: #2b3240; --line-soft: #222835;
+    --accent: #ff5a6a; --money: #f5a524; --money-soft: #2a1f12; --ok: #4ade80; --ok-soft: #122619; --chip: #202633; color-scheme: dark }
+
+  body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.5;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+  h1, h2, h3 { text-wrap: balance; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+  h1 { font-size: clamp(28px, 4vw, 44px); line-height: 1.1; }
+  h2 { font-size: 22px; margin-top: 56px; margin-bottom: 6px; }
+  h3 { font-size: 15px; }
+  p { margin: 0; max-width: 68ch; }
+  a { color: inherit; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: currentColor; }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; }
+  .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; }
+  .lede { color: var(--muted); font-size: 17px; margin-top: 12px; }
+
+  header { padding-top: 40px; display: grid; gap: 14px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .mark { display: inline-flex; width: 36px; height: 24px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .chip { background: var(--chip); border-radius: 999px; padding: 4px 11px; font-size: 13px; }
+  .chip.live::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); margin-right: 7px; vertical-align: 1px; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-top: 28px; }
+  .stat { background: var(--panel); padding: 14px 16px; min-width: 0; }
+  .stat .v { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .stat .k { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+
+  figure { margin: 18px 0 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .scroll { overflow-x: auto; }
+  figure svg { display: block; max-width: 100%; height: auto; min-width: 720px; font-family: var(--sans); }
+  figcaption { color: var(--muted); font-size: 13.5px; margin-top: 12px; max-width: 80ch; }
+  svg text { fill: currentColor; font-size: 12px; }
+  svg .title { font-weight: 600; font-size: 13px; }
+  svg .small { font-size: 11px; fill: var(--muted); }
+  svg .mono { font-family: var(--mono); font-size: 11px; }
+  svg .xs { font-size: 10px; }
+  svg .box { fill: var(--bg); stroke: var(--line); stroke-width: 1; }
+  svg .sub { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+  svg .ln { stroke: currentColor; stroke-width: 1.4; fill: none; }
+  svg .money { stroke: var(--money); stroke-width: 2; fill: none; }
+  svg .proof { stroke: var(--ok); stroke-width: 1.8; fill: none; }
+  svg .dash { stroke-dasharray: 5 4; }
+  svg .life { stroke: var(--line); stroke-width: 1; }
+  svg .fill-fg { fill: currentColor; }
+  svg .fill-money { fill: var(--money); }
+  svg .fill-proof { fill: var(--ok); }
+  svg .t-money { fill: var(--money); font-weight: 500; }
+  svg .t-proof { fill: var(--ok); font-weight: 500; }
+  svg .note { fill: var(--money-soft); stroke: var(--money); stroke-width: 1; }
+  svg .note-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1; }
+
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 16px; margin-top: 18px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; min-width: 0; }
+  .card h3 { margin-bottom: 10px; }
+  .card ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+  .card li { padding-left: 2px; }
+  .kv { display: grid; grid-template-columns: minmax(120px, 0.6fr) minmax(0, 1.4fr); gap: 6px 14px; font-size: 14px; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-top: 1px solid var(--line-soft); }
+  th { color: var(--muted); font-weight: 500; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.06em; border-top: 0; }
+  th:nth-child(1) { width: 14%; } th:nth-child(2) { width: 44%; }
+  td code { overflow-wrap: anywhere; }
+  .tbl { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; margin-top: 18px; }
+  td .mono { overflow-wrap: anywhere; }
+  .pill { display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 12px; font-weight: 500; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.money { background: var(--money-soft); color: var(--money); }
+
+  footer { margin-top: 56px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
+  @media (max-width: 560px) { .kv { grid-template-columns: 1fr; gap: 2px 0; } .kv dt { margin-top: 8px; } h2 { margin-top: 40px; } }
+  @media (prefers-reduced-motion: no-preference) { a { transition: text-decoration-color 120ms; } }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="brand">
+    <span class="mark" aria-hidden="true"><svg viewBox="0 0 36 24" width="36" height="24"><circle cx="12" cy="12" r="12" fill="#eb001b"/><circle cx="24" cy="12" r="12" fill="#f79e1b" fill-opacity="0.92"/></svg></span>
+    <span class="eyebrow">NEXXEN · AI Fintech on XRP Ledger hackathon · Oct 24–25, 2026</span>
+  </div>
+  <h1>How a machine pays a machine</h1>
+  <p class="lede">An AI buying agent purchases pay-per-call AI tools from independent seller agents over HTTP 402 (x402). Each call is paid with a signed RLUSD voucher, redeemed on XRPL EVM Testnet and settled to the seller through Mastercard Agent Pay for Machines (AP4M). No wallet pop-up, no approval screen: the business sets a spending policy once.</p>
+  <div class="chips">
+    <span class="chip live">Live · XRPL EVM Testnet · chain 1449000</span>
+    <span class="chip">x402 · HTTP 402 payments</span>
+    <span class="chip">RLUSD · ERC-20, 18 decimals</span>
+    <span class="chip">AP4M payment Channels</span>
+    <span class="chip">Verifiable on Blockscout</span>
+  </div>
+  <div class="stats" aria-label="Live numbers at the time of writing">
+    <div class="stat"><div class="v">10</div><div class="k">on-chain purchases today, each a VoucherRedeemed tx</div></div>
+    <div class="stat"><div class="v">0.001 <span class="eyebrow">RLUSD</span></div><div class="k">price of one AI call, quoted live by the seller's 402</div></div>
+    <div class="stat"><div class="v">≈ 40 s</div><div class="k">402 → voucher → on-chain redemption → result, no human</div></div>
+    <div class="stat"><div class="v">20 → 19.243</div><div class="k">team RLUSD budget, before and after today's calls</div></div>
+    <div class="stat"><div class="v">7.14 <span class="eyebrow">RLUSD</span></div><div class="k">merchant payout wallet balance, 12 settlement transfers</div></div>
+  </div>
+</header>
+
+<h2>1. Who talks to whom</h2>
+<p class="eyebrow">System architecture</p>
+<figure>
+  <div class="scroll">
+  <svg viewBox="0 0 1300 620" role="img" aria-label="Architecture: the business sets policy and picks a tool; the NEXXEN agent talks HTTP 402 to four x402 merchants, which redeem vouchers on the PaymentLedger contract on XRPL EVM Testnet; the AP4M service opens channels and settles RLUSD from the escrow vault to the merchant payout wallet.">
+    <defs>
+      <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" class="fill-fg"/></marker>
+      <marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" class="fill-money"/></marker>
+      <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" class="fill-proof"/></marker>
+    </defs>
+
+    <!-- Business -->
+    <rect x="20" y="230" width="180" height="150" rx="10" class="box"/>
+    <text x="36" y="256" class="title">Business &amp; user</text>
+    <text x="36" y="278" class="small">Bean There Coffee Co. (demo)</text>
+    <text x="36" y="304">sets the policy once in config</text>
+    <text x="36" y="322" class="mono">AP4M_MAX_PRICE=0.01 RLUSD</text>
+    <text x="36" y="340" class="mono">AP4M_MAX_CHANNEL_CAP=0.1</text>
+    <text x="36" y="364">picks a tool, gives the input</text>
+
+    <!-- Agent -->
+    <rect x="270" y="150" width="230" height="320" rx="10" class="box"/>
+    <text x="286" y="176" class="title">NEXXEN agent</text>
+    <text x="286" y="196" class="small">Next.js · Vercel AI SDK · Claude</text>
+    <rect x="286" y="212" width="198" height="78" rx="6" class="sub"/>
+    <text x="298" y="232" class="small">agent tools</text>
+    <text x="298" y="250" class="mono xs">list_services · get_balance</text>
+    <text x="298" y="266" class="mono xs">buy_service · settle_payments</text>
+    <text x="298" y="282" class="small">no approve tool exists</text>
+    <rect x="286" y="302" width="198" height="78" rx="6" class="sub"/>
+    <text x="298" y="322" class="small">agent wallet</text>
+    <text x="298" y="340" class="mono">0xe3D8…5183</text>
+    <text x="298" y="357">signs EIP-712 vouchers</text>
+    <text x="298" y="373">pays gas in XRP (53.5 XRP)</text>
+    <text x="286" y="408">policy check before any signature</text>
+    <text x="286" y="426">keys only in env, never sent</text>
+    <text x="286" y="444">journal of purchases + receipts</text>
+
+    <!-- Merchants -->
+    <rect x="640" y="150" width="220" height="320" rx="10" class="box"/>
+    <text x="656" y="176" class="title">x402 merchants</text>
+    <text x="656" y="196" class="small">4 independent seller agents</text>
+    <rect x="656" y="212" width="188" height="26" rx="6" class="sub"/><text x="666" y="230">GistBot · summarize <tspan class="mono">:4308</tspan></text>
+    <rect x="656" y="244" width="188" height="26" rx="6" class="sub"/><text x="666" y="262">Polyglot AI · translate <tspan class="mono">:4309</tspan></text>
+    <rect x="656" y="276" width="188" height="26" rx="6" class="sub"/><text x="666" y="294">PixelForge · image <tspan class="mono">:4310</tspan></text>
+    <rect x="656" y="308" width="188" height="26" rx="6" class="sub"/><text x="666" y="326">ToneScope · sentiment <tspan class="mono">:4311</tspan></text>
+    <text x="656" y="362">each one, per request:</text>
+    <text x="656" y="380" class="small">answers GET /resource with 402</text>
+    <text x="656" y="396" class="small">verifies the voucher signature</text>
+    <text x="656" y="412" class="small">redeems it on-chain, then</text>
+    <text x="656" y="428" class="small">runs the AI job (Claude, no tools)</text>
+    <text x="656" y="452" class="small">pays out to one merchant wallet</text>
+
+    <!-- AP4M service -->
+    <rect x="1000" y="30" width="280" height="110" rx="10" class="box"/>
+    <text x="1016" y="56" class="title">AP4M service</text>
+    <text x="1016" y="76" class="mono">hackathon.ap4m.build</text>
+    <text x="1016" y="98" class="small">team sign-in · channel requests</text>
+    <text x="1016" y="114" class="small">record-redemption · settlement · receipts</text>
+
+    <!-- Chain -->
+    <rect x="1000" y="190" width="280" height="406" rx="10" class="box"/>
+    <text x="1016" y="216" class="title">XRPL EVM Testnet</text>
+    <text x="1016" y="234" class="small">chain 1449000 · gas in XRP · explorer.testnet.xrplevm.org</text>
+    <rect x="1016" y="250" width="248" height="88" rx="6" class="sub"/>
+    <text x="1028" y="270" class="title">PaymentLedger</text>
+    <text x="1028" y="288" class="mono">0xcAB4…aE91</text>
+    <text x="1028" y="306" class="small">payment Channels · redeemVoucher</text>
+    <text x="1028" y="324" class="t-proof">emits VoucherRedeemed</text>
+    <rect x="1016" y="350" width="248" height="72" rx="6" class="sub"/>
+    <text x="1028" y="370" class="title">PooledEscrowVault</text>
+    <text x="1028" y="388" class="mono">0x83DD…aBC0</text>
+    <text x="1028" y="406" class="small">holds the team's 20 RLUSD allocation</text>
+    <rect x="1016" y="434" width="248" height="56" rx="6" class="sub"/>
+    <text x="1028" y="454" class="title">RLUSD <tspan class="small">ERC-20, 18 decimals</tspan></text>
+    <text x="1028" y="472" class="mono">0x27b5…16f3</text>
+    <rect x="1016" y="508" width="248" height="72" rx="6" class="note"/>
+    <text x="1028" y="528" class="title">Merchant payout wallet</text>
+    <text x="1028" y="546" class="mono">0xC46D…E2B8</text>
+    <text x="1028" y="564" class="small">receives RLUSD at settlement · 7.14 RLUSD today</text>
+
+    <!-- Business -> Agent -->
+    <line x1="200" y1="300" x2="268" y2="300" class="ln" marker-end="url(#a)"/>
+    <text x="234" y="292" text-anchor="middle" class="small">goal, input</text>
+    <line x1="200" y1="340" x2="268" y2="340" class="ln dash" marker-end="url(#a)"/>
+    <text x="234" y="356" text-anchor="middle" class="small">policy</text>
+
+    <!-- Agent <-> Merchants -->
+    <line x1="500" y1="222" x2="638" y2="222" class="ln" marker-end="url(#a)"/>
+    <text x="570" y="214" text-anchor="middle">① GET /resource</text>
+    <line x1="638" y1="272" x2="502" y2="272" class="ln" marker-end="url(#a)"/>
+    <text x="570" y="264" text-anchor="middle">② HTTP 402</text>
+    <text x="570" y="288" text-anchor="middle" class="small">PAYMENT-REQUIRED: price</text>
+    <line x1="500" y1="322" x2="638" y2="322" class="money" marker-end="url(#am)"/>
+    <text x="570" y="314" text-anchor="middle" class="t-money">③ PAYMENT-SIGNATURE</text>
+    <text x="570" y="338" text-anchor="middle" class="small">voucher 0.001 RLUSD</text>
+    <line x1="638" y1="382" x2="502" y2="382" class="ln" marker-end="url(#a)"/>
+    <text x="570" y="374" text-anchor="middle">⑤ 200 + result</text>
+    <text x="570" y="398" text-anchor="middle" class="small">PAYMENT-RESPONSE + tx</text>
+
+    <!-- Merchants -> PaymentLedger -->
+    <line x1="860" y1="286" x2="1014" y2="286" class="money" marker-end="url(#am)"/>
+    <text x="937" y="278" text-anchor="middle" class="t-money">④ redeemVoucher tx</text>
+    <text x="937" y="302" text-anchor="middle" class="small">gas paid in XRP</text>
+
+    <!-- Agent -> AP4M service (over the top) -->
+    <polyline points="385,150 385,85 998,85" class="ln" marker-end="url(#a)"/>
+    <text x="690" y="77" text-anchor="middle" class="small">sign-in · requestChannel · record-redemption(tx) · settle</text>
+
+    <!-- Service -> chain -->
+    <line x1="1140" y1="140" x2="1140" y2="188" class="ln" marker-end="url(#a)"/>
+    <text x="1150" y="168" class="small">opens channels, settles</text>
+
+    <!-- Vault -> merchant wallet (money) -->
+    <polyline points="1272,386 1290,386 1290,544 1266,544" class="money" marker-end="url(#am)"/>
+    <text x="1286" y="465" text-anchor="middle" class="t-money" transform="rotate(-90 1286 465)">⑥ settle: RLUSD payout</text>
+  </svg>
+  </div>
+  <figcaption>Three parties and one chain. The agent never holds the business's RLUSD: the budget sits in the AP4M escrow vault, the agent signs vouchers against a Channel, the seller redeems them on the PaymentLedger, and the AP4M service pays the seller's wallet from the vault at settlement. Orange edges are the ones that move money.</figcaption>
+</figure>
+
+<h2>2. One paid API call, step by step</h2>
+<p class="eyebrow">The x402 handshake as it ran in the demo (summarize-url, 0.001 RLUSD)</p>
+<figure>
+  <div class="scroll">
+  <svg viewBox="0 0 1200 660" role="img" aria-label="Sequence: the agent requests the resource, gets a 402 with a price, checks policy and signs an EIP-712 voucher, retries with the PAYMENT-SIGNATURE header, the merchant redeems the voucher on the PaymentLedger which emits VoucherRedeemed, the merchant runs the job and returns the result, the agent records the redemption with the AP4M service, and the service settles RLUSD to the merchant wallet.">
+    <defs>
+      <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" class="fill-fg"/></marker>
+      <marker id="bm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" class="fill-money"/></marker>
+      <marker id="bp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" class="fill-proof"/></marker>
+    </defs>
+    <!-- lifeline heads -->
+    <rect x="90" y="20" width="180" height="48" rx="8" class="box"/><text x="180" y="40" text-anchor="middle" class="title">NEXXEN agent</text><text x="180" y="58" text-anchor="middle" class="mono">0xe3D8…5183</text>
+    <rect x="390" y="20" width="180" height="48" rx="8" class="box"/><text x="480" y="40" text-anchor="middle" class="title">Merchant (GistBot)</text><text x="480" y="58" text-anchor="middle" class="mono">127.0.0.1:4308/resource</text>
+    <rect x="690" y="20" width="180" height="48" rx="8" class="box"/><text x="780" y="40" text-anchor="middle" class="title">PaymentLedger</text><text x="780" y="58" text-anchor="middle" class="mono">XRPL EVM · 0xcAB4…aE91</text>
+    <rect x="990" y="20" width="180" height="48" rx="8" class="box"/><text x="1080" y="40" text-anchor="middle" class="title">AP4M service</text><text x="1080" y="58" text-anchor="middle" class="mono">hackathon.ap4m.build</text>
+    <line x1="180" y1="68" x2="180" y2="640" class="life"/>
+    <line x1="480" y1="68" x2="480" y2="640" class="life"/>
+    <line x1="780" y1="68" x2="780" y2="640" class="life"/>
+    <line x1="1080" y1="68" x2="1080" y2="640" class="life"/>
+
+    <!-- 1 -->
+    <line x1="180" y1="110" x2="478" y2="110" class="ln" marker-end="url(#b)"/>
+    <text x="330" y="102" text-anchor="middle">① GET /resource</text>
+    <text x="330" y="126" text-anchor="middle" class="small mono">X-AP4M-CHANNEL-ID: 0xf7b6…4a6e</text>
+    <!-- 2 -->
+    <line x1="480" y1="160" x2="182" y2="160" class="ln" marker-end="url(#b)"/>
+    <text x="330" y="152" text-anchor="middle">② HTTP 402 + PAYMENT-REQUIRED</text>
+    <text x="330" y="176" text-anchor="middle" class="small">0.001 RLUSD · scheme batch-settlement · 300 s window</text>
+    <!-- 3 note -->
+    <rect x="20" y="196" width="350" height="62" rx="8" class="note"/>
+    <text x="34" y="216" class="t-money">③ agent decides, no human</text>
+    <text x="34" y="233" class="small">price ≤ policy (0.01 RLUSD)? seller allowed? channel has room?</text>
+    <text x="34" y="249" class="small mono">sign EIP-712 Voucher {channelId, cumulativeAmount}</text>
+    <!-- 4 -->
+    <line x1="180" y1="290" x2="478" y2="290" class="money" marker-end="url(#bm)"/>
+    <text x="330" y="282" text-anchor="middle" class="t-money">④ GET /resource + PAYMENT-SIGNATURE</text>
+    <text x="330" y="306" text-anchor="middle" class="small">cumulative amount 0.756 → 0.757 RLUSD on this Channel</text>
+    <!-- 5 -->
+    <line x1="480" y1="340" x2="778" y2="340" class="money" marker-end="url(#bm)"/>
+    <text x="630" y="332" text-anchor="middle" class="t-money">⑤ redeemVoucher(voucher, signature)</text>
+    <text x="630" y="356" text-anchor="middle" class="small">transaction from the submitter wallet, gas in XRP</text>
+    <!-- 6 -->
+    <line x1="780" y1="390" x2="482" y2="390" class="proof" marker-end="url(#bp)"/>
+    <text x="630" y="382" text-anchor="middle" class="t-proof">⑥ VoucherRedeemed(channelId, claimId, amount)</text>
+    <text x="630" y="406" text-anchor="middle" class="small mono">topic0 0xe3de5c37…f7175 · tx 0xc6db23f0…44a5b3</text>
+    <!-- 7 note -->
+    <rect x="500" y="424" width="300" height="46" rx="8" class="note-ok"/>
+    <text x="514" y="444" class="t-proof">seller runs the AI job only now</text>
+    <text x="514" y="461" class="small">Claude (haiku) with zero tools: it can never reach the buyer's wallet</text>
+    <!-- 8 -->
+    <line x1="480" y1="500" x2="182" y2="500" class="ln" marker-end="url(#b)"/>
+    <text x="330" y="492" text-anchor="middle">⑦ 200 + PAYMENT-RESPONSE + resource</text>
+    <text x="330" y="516" text-anchor="middle" class="small">summary delivered · receipt: price, tx hash, new balance</text>
+    <!-- 9 -->
+    <line x1="180" y1="550" x2="1078" y2="550" class="ln" marker-end="url(#b)"/>
+    <text x="630" y="542" text-anchor="middle">⑧ record-redemption(tx_hash)</text>
+    <!-- 10 -->
+    <line x1="1080" y1="600" x2="782" y2="600" class="money" marker-end="url(#bm)"/>
+    <text x="930" y="592" text-anchor="middle" class="t-money">⑨ settle → vault pays RLUSD to 0xC46D…E2B8</text>
+    <text x="930" y="616" text-anchor="middle" class="small">batched per Channel · receipts published by the service</text>
+  </svg>
+  </div>
+  <figcaption>Steps ① to ⑧ took about 40 seconds live and involved no person. The seller only does work after the chain has accepted the voucher, and the buyer's wallet is never exposed to the seller's model.</figcaption>
+</figure>
+
+<h2>3. Where the money goes</h2>
+<p class="eyebrow">Movement of funds, with today's live amounts</p>
+<figure>
+  <div class="scroll">
+  <svg viewBox="0 0 1300 340" role="img" aria-label="Funds: the organizer's 20 RLUSD team allocation sits in the PooledEscrowVault; a Channel on the PaymentLedger is opened with a 2 RLUSD cap; each call adds 0.001 RLUSD to the cumulative voucher, redeemed as claims; the AP4M service settles claims by paying RLUSD from the vault to the merchant payout wallet. XRP from the agent wallet pays gas for channel and redemption transactions.">
+    <defs>
+      <marker id="c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" class="fill-fg"/></marker>
+      <marker id="cm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" class="fill-money"/></marker>
+    </defs>
+    <rect x="20" y="80" width="260" height="130" rx="10" class="box"/>
+    <text x="36" y="106" class="title">Team allocation</text>
+    <text x="36" y="126" class="small">funded by the organizers for the hackathon</text>
+    <text x="36" y="156" class="title" style="font-size:22px">20 RLUSD</text>
+    <text x="36" y="178" class="small">held in PooledEscrowVault <tspan class="mono">0x83DD…aBC0</tspan></text>
+    <text x="36" y="196" class="small">status: active · spent today 0.757</text>
+
+    <line x1="280" y1="145" x2="348" y2="145" class="money" marker-end="url(#cm)"/>
+    <text x="314" y="134" text-anchor="middle" class="small xs">open Channel</text>
+
+    <rect x="350" y="80" width="260" height="130" rx="10" class="box"/>
+    <text x="366" y="106" class="title">Payment Channel</text>
+    <text x="366" y="126" class="small">on PaymentLedger · reused for many calls</text>
+    <text x="366" y="156" class="title" style="font-size:22px">cap 2.0 RLUSD</text>
+    <text x="366" y="178" class="small mono">0xf7b6ba91…05104a6e</text>
+    <text x="366" y="196" class="small">redeemed so far: 0.757 / 2.0 RLUSD</text>
+
+    <line x1="610" y1="145" x2="678" y2="145" class="money" marker-end="url(#cm)"/>
+    <text x="644" y="134" text-anchor="middle" class="small">per call</text>
+
+    <rect x="680" y="80" width="260" height="130" rx="10" class="box"/>
+    <text x="696" y="106" class="title">Cumulative vouchers → claims</text>
+    <text x="696" y="126" class="small">amount = running total, not the price</text>
+    <text x="696" y="156" class="title" style="font-size:22px">+0.001 RLUSD</text>
+    <text x="696" y="178" class="small">per AI call · 10 redemptions today</text>
+    <text x="696" y="196" class="small">each one a <tspan class="t-proof">VoucherRedeemed</tspan> event on-chain</text>
+
+    <line x1="940" y1="145" x2="1008" y2="145" class="money" marker-end="url(#cm)"/>
+    <text x="974" y="134" text-anchor="middle" class="small">settle</text>
+
+    <rect x="1010" y="80" width="270" height="130" rx="10" class="note"/>
+    <text x="1026" y="106" class="title">Merchant payout wallet</text>
+    <text x="1026" y="126" class="small">the sellers' RLUSD account (EOA)</text>
+    <text x="1026" y="156" class="title" style="font-size:22px">7.14 RLUSD</text>
+    <text x="1026" y="178" class="small mono">0xC46D99Fa…057CE2B8</text>
+    <text x="1026" y="196" class="small">12 transfers in from the vault today</text>
+
+    <!-- gas -->
+    <rect x="350" y="250" width="930" height="74" rx="10" class="sub"/>
+    <text x="366" y="272" class="title">Gas: XRP, not RLUSD</text>
+    <text x="366" y="292" class="small">Agent wallet 0xe3D8…5183 holds 53.5 XRP from the XRPL EVM faucet and pays for channel requests and voucher redemptions.</text>
+    <text x="366" y="310" class="small">RLUSD is only ever moved by the PaymentLedger and the vault; the agent's wallet never holds the business's RLUSD.</text>
+    <line x1="480" y1="250" x2="480" y2="212" class="ln dash" marker-end="url(#c)"/>
+    <line x1="810" y1="250" x2="810" y2="212" class="ln dash" marker-end="url(#c)"/>
+  </svg>
+  </div>
+  <figcaption>The business's budget never sits in the agent's wallet. It stays in escrow; a Channel caps what the agent can commit; every call adds to a cumulative voucher that the seller redeems on-chain; the AP4M service pays sellers from the vault when a Channel is settled.</figcaption>
+</figure>
+
+<h2>4. Details the judges will ask about</h2>
+<div class="grid2">
+  <section class="card">
+    <h3>Autonomy and safety</h3>
+    <ul>
+      <li>The agent has four tools: <code>list_services</code>, <code>get_balance</code>, <code>buy_service</code>, <code>settle_payments</code>. There is no approve tool; approval is the policy in config.</li>
+      <li>Before signing, the agent checks the 402 price against <code>AP4M_MAX_PRICE</code> (0.01 RLUSD) and the Channel cap against <code>AP4M_MAX_CHANNEL_CAP</code>.</li>
+      <li>Vouchers are EIP-712 typed data: domain <code>AP4M Payment Ledger</code> v1, chain 1449000, verifying contract the PaymentLedger; fields <code>channelId</code>, <code>cumulativeAmount</code>.</li>
+      <li>Private keys are read from environment variables and never sent to the AP4M service; only signatures leave the process.</li>
+      <li>Each seller runs its AI job in a separate model with zero tools, after redemption, so a malicious seller prompt cannot reach the buyer's wallet.</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h3>What is real</h3>
+    <ul>
+      <li>Every purchase is a real transaction on XRPL EVM Testnet, visible on Blockscout with a <code>VoucherRedeemed</code> log at the PaymentLedger address.</li>
+      <li>The 402 price is live: the store page asks each merchant for its challenge and shows the amount it returns.</li>
+      <li>The AP4M rails are the official hackathon kit: channels, redemption and settlement run on the kit's contracts and service.</li>
+      <li>The AI jobs are real model calls (summaries, translations, sentiment) and a real image endpoint.</li>
+      <li>Settlement to the merchant wallet is executed by the AP4M service; the merchant wallet's RLUSD transfers are on the explorer.</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h3>Why a machine has to pay here</h3>
+    <ul>
+      <li>Four sellers, four prices, hundreds of possible calls a day: a human approving each 0.001 RLUSD payment would cost more than the payment.</li>
+      <li>Vouchers are cumulative, so a Channel absorbs unlimited calls with one on-chain cap. That is the shape an agent economy needs: micro-payments with a macro limit.</li>
+      <li>The seller is itself an agent. It prices, verifies, redeems and delivers without an operator.</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h3>Addresses</h3>
+    <dl class="kv">
+      <dt>Network</dt><dd>XRPL EVM Testnet · chain ID 1449000 · RPC <span class="mono">rpc.testnet.xrplevm.org</span></dd>
+      <dt>Agent wallet</dt><dd><a class="mono" href="https://explorer.testnet.xrplevm.org/address/0xe3D841aE3Acc8Dc79577092C141205f3d0Bf5183">0xe3D841aE3Acc8Dc79577092C141205f3d0Bf5183</a></dd>
+      <dt>Merchant payout</dt><dd><a class="mono" href="https://explorer.testnet.xrplevm.org/address/0xc46d99faae8482f3876f49cae56b9f09057ce2b8?tab=token_transfers">0xC46D99FAaE8482F3876f49cAE56B9F09057CE2B8</a></dd>
+      <dt>Merchant ID</dt><dd><span class="mono">0xb1dff287ab49fdae3e9165d1632fc9d29b4148042e53e006845785a5eac0b0ea</span></dd>
+      <dt>PaymentLedger</dt><dd><a class="mono" href="https://explorer.testnet.xrplevm.org/address/0xcAB42800A5ECF0D253Fa2581Bb3334B4DAEfaE91">0xcAB42800A5ECF0D253Fa2581Bb3334B4DAEfaE91</a></dd>
+      <dt>PooledEscrowVault</dt><dd><a class="mono" href="https://explorer.testnet.xrplevm.org/address/0x83DD9cD010eb46e96eceF8F7eB0a18f7845AaBC0">0x83DD9cD010eb46e96eceF8F7eB0a18f7845AaBC0</a></dd>
+      <dt>RLUSD token</dt><dd><a class="mono" href="https://explorer.testnet.xrplevm.org/token/0x27b57a9D0b8d24EB97259c4E2279e45255e016f3">0x27b57a9D0b8d24EB97259c4E2279e45255e016f3</a></dd>
+      <dt>Participant registry</dt><dd><span class="mono">0x4cF27435FE56161aa9b1cffdD87784aa68b7D1E8</span></dd>
+    </dl>
+  </section>
+</div>
+
+<h2>5. Judge checklist, with where to verify</h2>
+<div class="tbl">
+<table>
+  <thead><tr><th>Criterion</th><th>What NEXXEN does</th><th>Verify</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Autonomy</strong></td><td>Reads the 402, checks policy, signs the voucher, submits, retries. The user only picks the tool and types the input.</td><td>Watch the chat: one message in, result and receipt out, no confirmation step.</td></tr>
+    <tr><td><strong>Use case</strong></td><td>Pay-per-call AI tools sold by seller agents. Payment is load-bearing: the seller runs the job only after redemption.</td><td>Call a merchant without paying: <code>GET 127.0.0.1:4308/resource</code> returns 402.</td></tr>
+    <tr><td><strong>On-chain proof</strong></td><td>Every purchase is a <code>redeemVoucher</code> transaction; the PaymentLedger emits <code>VoucherRedeemed</code>.</td><td><a href="https://explorer.testnet.xrplevm.org/tx/0xc6db23f0a5a2733e4ff440450ef6139cd329f36ab73c1862741479dca244a5b3?tab=logs">Demo purchase logs</a> · <span class="pill ok">topic0 0xe3de5c37…</span> matches <code>keccak256("VoucherRedeemed(bytes32,bytes32,bytes32,bytes32,address,bytes32,address,address,uint256,uint256,uint256)")</code></td></tr>
+    <tr><td><strong>RLUSD settlement</strong></td><td>The AP4M service settles redeemed claims by transferring RLUSD from the escrow vault to the merchant payout wallet.</td><td><a href="https://explorer.testnet.xrplevm.org/address/0xc46d99faae8482f3876f49cae56b9f09057ce2b8?tab=token_transfers">Merchant wallet token transfers</a> · <span class="pill money">12 RLUSD transfers in</span> from 0x83DD…aBC0</td></tr>
+    <tr><td><strong>Demo quality</strong></td><td>Agent starts, meets a 402, pays, resource unlocks, receipt links to the chain. About 40 seconds end to end on testnet.</td><td>Live run at the booth; the recording shows the same flow unedited apart from a 6x cut of the wait.</td></tr>
+    <tr><td><strong>Creativity</strong></td><td>Four merchant types with live pricing, cumulative-voucher Channels for micro-payments, a buyer agent whose only tools are commercial, and seller agents with no tools at all.</td><td>Store page: four sellers, each with a live 402 price; AP4M page: one Channel, many purchases.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<footer>
+  Snapshot taken Oct 24, 2026, 21:05 UTC from the live app and Blockscout. Amounts are RLUSD unless marked XRP. Testnet only; nothing here points at a mainnet.
+</footer>
+</div>
+</body></html>

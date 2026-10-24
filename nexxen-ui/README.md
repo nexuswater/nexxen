@@ -46,6 +46,21 @@ Configuration is in `.env.local`:
 | `AP4M_MODE` | `auto` (default: live when the agent can sign in), `live`, or `demo` |
 | `AI_MODEL` | Agent model, default `claude-code:sonnet` (uses a local `claude` login, no API key) |
 
+### For teammates picking this up
+
+- **Env:** `.env.local` is committed and is all the AP4M config you need (team, agent key, merchant ID,
+  payout, policy). Don't change the agent key or team name.
+- **AI model:** the default `AI_MODEL=claude-code:sonnet` uses *your* local Claude Code login. Install
+  Claude Code and run `claude` once to sign in, or set `AI_MODEL` to an API provider plus its key
+  (see `.env.example`).
+- **Tooling:** Node 22.13+ and pnpm. Start the sellers (`pnpm merchants`) before the app.
+- **One live buyer at a time:** everyone shares one agent wallet and Channel. Purchases read the Channel's
+  on-chain total before signing, so taking turns is fine, but two machines buying in the same few seconds
+  can collide.
+- **Local history:** the purchase journal (`.ap4m/`) stays on each machine, so a fresh checkout starts with
+  an empty history dialog; balances come from the chain and are shared.
+- **Docs:** `docs/` has the architecture page, the flow diagram and a 66 s demo video.
+
 `demo` mode runs the same flow locally (real signed vouchers, simulated Channel and payout) and is used
 automatically if live sign-in fails.
 

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEXXEN Payment Flow</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root {
+    --bg0: #0a0f1f; --bg1: #121a36; --card: #151d36; --card-edge: #2a3557; --fg: #eef2ff; --muted: #9aa6c8;
+    --orange: #f79e1b; --red: #eb001b; --green: #3ddc84; --blue: #7aa2ff;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif; --mono: "IBM Plex Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  html, body { margin: 0; min-height: 100%; }
+  body { background: radial-gradient(1200px 700px at 70% -10%, var(--bg1), var(--bg0) 70%); color: var(--fg); font-family: var(--sans);
+    display: grid; place-items: center; padding: 24px; box-sizing: border-box; }
+  figure { margin: 0; width: min(1400px, 100%); }
+  svg { display: block; width: 100%; height: auto; font-family: var(--sans); }
+  text { fill: var(--fg); font-size: 13px; }
+  .h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
+  .h2 { fill: var(--muted); font-size: 14px; }
+  .title { font-size: 16px; font-weight: 600; }
+  .sub { fill: var(--muted); font-size: 12px; }
+  .mono { font-family: var(--mono); font-size: 11.5px; }
+  .muted { fill: var(--muted); }
+  .orange { fill: var(--orange); font-weight: 600; }
+  .green { fill: var(--green); font-weight: 600; }
+  .blue { fill: var(--blue); }
+  .small { font-size: 11.5px; }
+  .card { fill: var(--card); stroke: var(--card-edge); stroke-width: 1; }
+  .glow { fill: var(--card); stroke: var(--orange); stroke-width: 1.2; }
+  .icon { fill: #0c1226; stroke: var(--card-edge); stroke-width: 1; }
+  .ln { stroke: var(--blue); stroke-width: 1.6; fill: none; }
+  .dash { stroke-dasharray: 6 5; }
+  .money { stroke: var(--orange); stroke-width: 2.4; fill: none; }
+  .proof { stroke: var(--green); stroke-width: 2.2; fill: none; }
+  .ar-blue { fill: var(--blue); } .ar-orange { fill: var(--orange); } .ar-green { fill: var(--green); }
+  .chip { fill: rgba(255,255,255,0.05); stroke: var(--card-edge); stroke-width: 1; }
+</style>
+</head>
+<body>
+<figure>
+<svg viewBox="0 0 1400 860" role="img" aria-label="NEXXEN payment flow: a business sets a spending policy; the NEXXEN agent asks an x402 seller for a resource, receives HTTP 402 with a price, signs an RLUSD voucher and pays; the seller redeems the voucher on XRPL EVM Testnet, which emits VoucherRedeemed, then returns the result; Mastercard Agent Pay for Machines settles the redeemed claims and pays RLUSD from the escrow vault to the seller's payout wallet.">
+  <defs>
+    <marker id="mb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" class="ar-blue"/></marker>
+    <marker id="mo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" class="ar-orange"/></marker>
+    <marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" class="ar-green"/></marker>
+  </defs>
+
+  <!-- Heading -->
+  <g transform="translate(70 22)">
+    <circle cx="14" cy="24" r="14" fill="#eb001b"/><circle cx="34" cy="24" r="14" fill="#f79e1b" fill-opacity="0.92"/>
+    <text x="62" y="33" class="h1">How NEXXEN pays a machine</text>
+    <text x="0" y="68" class="h2">An AI agent buys AI tools per call over x402, pays in RLUSD on XRPL EVM Testnet, and Mastercard Agent Pay for Machines settles the seller. No human approves a payment.</text>
+  </g>
+
+  <!-- ===== Top row ===== -->
+  <!-- Business -->
+  <g transform="translate(70 130)">
+    <rect width="300" height="190" rx="16" class="card"/>
+    <circle cx="44" cy="46" r="26" class="icon"/>
+    <g transform="translate(44 46)" fill="none" stroke="#eef2ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M-11 -2 L11 -2 L11 10 L-11 10 Z"/><path d="M-13 -2 L-10 -10 L10 -10 L13 -2"/><path d="M-3 10 L-3 3 L3 3 L3 10"/>
+    </g>
+    <text x="84" y="42" class="title">Business</text>
+    <text x="84" y="62" class="sub">Bean There Coffee Co. (demo)</text>
+    <text x="24" y="104">Sets the spending policy once</text>
+    <text x="24" y="128" class="mono">AP4M_MAX_PRICE = 0.01 RLUSD / call</text>
+    <text x="24" y="152">Picks a tool, gives the input</text>
+    <text x="24" y="174" class="sub">That is the only human step</text>
+  </g>
+
+  <!-- Agent -->
+  <g transform="translate(550 130)">
+    <rect width="300" height="190" rx="16" class="card"/>
+    <circle cx="44" cy="46" r="26" class="icon"/>
+    <path transform="translate(44 46)" d="M0 -13 L3.2 -3.2 L13 0 L3.2 3.2 L0 13 L-3.2 3.2 L-13 0 L-3.2 -3.2 Z" fill="#f79e1b"/>
+    <text x="84" y="42" class="title">NEXXEN agent</text>
+    <text x="84" y="62" class="sub">Claude · decides and pays on its own</text>
+    <text x="24" y="104">Reads the 402, checks the policy</text>
+    <text x="24" y="128">Signs an EIP-712 RLUSD voucher</text>
+    <text x="24" y="152" class="mono">wallet 0xe3D8…5183 · gas in XRP</text>
+    <text x="24" y="174" class="sub">No approve tool exists</text>
+  </g>
+
+  <!-- Seller -->
+  <g transform="translate(1030 130)">
+    <rect width="300" height="190" rx="16" class="card"/>
+    <circle cx="44" cy="46" r="26" class="icon"/>
+    <text x="44" y="51" text-anchor="middle" class="mono" style="font-size:13px;font-weight:700;fill:#eef2ff">402</text>
+    <text x="84" y="42" class="title">x402 seller agent</text>
+    <text x="84" y="62" class="sub">4 sellers · prices quoted live</text>
+    <text x="24" y="104" class="small">GistBot · Polyglot AI · PixelForge · ToneScope</text>
+    <text x="24" y="128">Answers GET /resource with 402</text>
+    <text x="24" y="152">Verifies and redeems the voucher</text>
+    <text x="24" y="174" class="sub">Runs the AI job only after payment</text>
+  </g>
+
+  <!-- ===== Bottom row ===== -->
+  <!-- Payout wallet -->
+  <g transform="translate(70 560)">
+    <rect width="300" height="190" rx="16" class="glow"/>
+    <circle cx="44" cy="46" r="26" class="icon"/>
+    <g transform="translate(44 46)"><circle r="13" fill="none" stroke="#3ddc84" stroke-width="2.2"/><text y="5" text-anchor="middle" style="font-size:14px;font-weight:700;fill:#3ddc84">$</text></g>
+    <text x="84" y="42" class="title">Seller payout wallet</text>
+    <text x="84" y="62" class="sub">RLUSD · the sellers get paid here</text>
+    <text x="24" y="104" class="mono">0xC46D…E2B8</text>
+    <text x="24" y="128">Receives RLUSD at settlement</text>
+    <text x="24" y="152">7.14 RLUSD today · 12 payouts</text>
+    <text x="24" y="174" class="sub">Balance change visible on the explorer</text>
+  </g>
+
+  <!-- AP4M -->
+  <g transform="translate(550 560)">
+    <rect width="300" height="190" rx="16" class="card"/>
+    <circle cx="44" cy="46" r="26" class="icon"/>
+    <g transform="translate(44 46)"><circle cx="-6" cy="0" r="10" fill="#eb001b"/><circle cx="6" cy="0" r="10" fill="#f79e1b" fill-opacity="0.92"/></g>
+    <text x="84" y="42" class="title">Mastercard AP4M</text>
+    <text x="84" y="62" class="sub">Agent Pay for Machines</text>
+    <text x="24" y="104">Opens payment Channels for the agent</text>
+    <text x="24" y="128">Records every redemption</text>
+    <text x="24" y="152">Settles claims from the escrow vault</text>
+    <text x="24" y="174" class="sub mono">hackathon.ap4m.build</text>
+  </g>
+
+  <!-- XRPL EVM -->
+  <g transform="translate(1030 560)">
+    <rect width="300" height="190" rx="16" class="card"/>
+    <circle cx="44" cy="46" r="26" class="icon"/>
+    <g transform="translate(44 46)" fill="none" stroke="#eef2ff" stroke-width="3.2" stroke-linecap="round"><path d="M-10 -9 C-4 -9 -4 0 0 0 C4 0 4 -9 10 -9"/><path d="M-10 9 C-4 9 -4 0 0 0 C4 0 4 9 10 9"/></g>
+    <text x="84" y="42" class="title">XRPL EVM Testnet</text>
+    <text x="84" y="62" class="sub">chain 1449000 · gas paid in XRP</text>
+    <text x="24" y="104" class="mono">PaymentLedger 0xcAB4…aE91</text>
+    <text x="24" y="128">Channel cap 2 RLUSD · cumulative vouchers</text>
+    <text x="24" y="152">Escrow vault holds the 20 RLUSD budget</text>
+    <text x="24" y="174" class="green">emits VoucherRedeemed on every payment</text>
+  </g>
+
+  <!-- ===== Arrows ===== -->
+  <!-- 1 Business -> Agent -->
+  <line x1="370" y1="225" x2="548" y2="225" class="ln" marker-end="url(#mb)"/>
+  <text x="459" y="214" text-anchor="middle">① goal + policy</text>
+  <text x="459" y="244" text-anchor="middle" class="sub">one sentence, no wallet pop-up</text>
+
+  <!-- 2 Agent -> Seller: 402 -->
+  <line x1="850" y1="186" x2="1028" y2="186" class="ln" marker-end="url(#mb)"/>
+  <text x="939" y="176" text-anchor="middle">② GET → HTTP 402 + price</text>
+
+  <!-- 3 Agent -> Seller: voucher -->
+  <line x1="850" y1="236" x2="1028" y2="236" class="money" marker-end="url(#mo)"/>
+  <text x="939" y="226" text-anchor="middle" class="orange">③ signed RLUSD voucher</text>
+  <text x="939" y="254" text-anchor="middle" class="sub">0.001 RLUSD per call</text>
+
+  <!-- 5 Seller -> Agent: result -->
+  <line x1="1028" y1="290" x2="852" y2="290" class="ln dash" marker-end="url(#mb)"/>
+  <text x="939" y="309" text-anchor="middle" class="blue">⑤ 200 + result unlocked</text>
+
+  <!-- 4 Seller -> Chain: redeem -->
+  <line x1="1180" y1="320" x2="1180" y2="558" class="money" marker-end="url(#mo)"/>
+  <text x="1196" y="430" class="orange">④ redeemVoucher tx</text>
+  <text x="1196" y="450" class="green">VoucherRedeemed event</text>
+  <text x="1196" y="470" class="sub">tx 0xc6db23f0…44a5b3</text>
+
+  <!-- Agent <-> AP4M control -->
+  <line x1="700" y1="320" x2="700" y2="558" class="ln dash" marker-end="url(#mb)" marker-start="url(#mb)"/>
+  <text x="716" y="430" class="blue">sign-in · open Channel</text>
+  <text x="716" y="450" class="blue">record redemption</text>
+  <text x="716" y="470" class="sub">control messages, no funds</text>
+
+  <!-- 6 Chain -> AP4M: settle -->
+  <line x1="1030" y1="655" x2="852" y2="655" class="proof" marker-end="url(#mg)"/>
+  <text x="941" y="645" text-anchor="middle" class="green">⑥ settle redeemed claims</text>
+  <text x="941" y="673" text-anchor="middle" class="sub">batched per Channel</text>
+
+  <!-- 7 AP4M -> Wallet: payout -->
+  <line x1="550" y1="655" x2="372" y2="655" class="money" marker-end="url(#mo)"/>
+  <text x="461" y="645" text-anchor="middle" class="orange">⑦ RLUSD payout</text>
+  <text x="461" y="673" text-anchor="middle" class="sub">from the escrow vault</text>
+
+  <!-- ===== Legend ===== -->
+  <g transform="translate(70 790)">
+    <line x1="0" y1="14" x2="34" y2="14" class="money"/><text x="44" y="18" class="sub">money moves</text>
+    <line x1="150" y1="14" x2="184" y2="14" class="proof"/><text x="194" y="18" class="sub">on-chain proof / settlement</text>
+    <line x1="376" y1="14" x2="410" y2="14" class="ln dash"/><text x="420" y="18" class="sub">control messages</text>
+  </g>
+  <g transform="translate(676 782)">
+    <rect width="150" height="30" rx="15" class="chip"/><circle cx="18" cy="15" r="7" fill="#eb001b"/><circle cx="28" cy="15" r="7" fill="#f79e1b" fill-opacity="0.92"/><text x="44" y="19" class="small">Mastercard AP4M</text>
+    <rect x="160" width="78" height="30" rx="15" class="chip"/><text x="199" y="19" text-anchor="middle" class="small mono">x402</text>
+    <rect x="248" width="140" height="30" rx="15" class="chip"/><g transform="translate(266 15)" fill="none" stroke="#eef2ff" stroke-width="2" stroke-linecap="round"><path d="M-6 -5 C-2 -5 -2 0 0 0 C2 0 2 -5 6 -5"/><path d="M-6 5 C-2 5 -2 0 0 0 C2 0 2 5 6 5"/></g><text x="282" y="19" class="small">XRPL EVM Testnet</text>
+    <rect x="398" width="86" height="30" rx="15" class="chip"/><circle cx="416" cy="15" r="7" fill="none" stroke="#3ddc84" stroke-width="1.6"/><text x="432" y="19" class="small">RLUSD</text>
+    <rect x="494" width="160" height="30" rx="15" class="chip"/><path transform="translate(512 15)" d="M0 -7 L1.7 -1.7 L7 0 L1.7 1.7 L0 7 L-1.7 1.7 L-7 0 L-1.7 -1.7 Z" fill="#f79e1b"/><text x="528" y="19" class="small">Claude buying agent</text>
+  </g>
+</svg>
+</figure>
+</body>
+</html>
