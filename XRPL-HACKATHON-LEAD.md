@@ -7,7 +7,7 @@
 Prepare and coordinate the agreed payment-first MVP in this repository. The user-supplied v5 master is background; later lean-scope decisions control implementation. Read [MVP](MVP.md), [API setup](API-SETUP.md) and [demo](DEMO.md) before work.
 
 - RLUSD-only enabled demo currency; dropdown alternatives disabled.
-- Daily/business/agent caps with atomic reservations; over-limit requests stop for explicit human review.
+- Owner-defined daily/weekly/monthly business/agent mandates with atomic reservations; over-limit requests block for a supported Ledger-approved treasurer funding/mandate action, then policy and funded capacity are rechecked before retry. Hardware approval cannot bypass contract caps.
 - Ledger Flex, user-reported hardware model 0908, for supported treasury approval; isolated operational signer for routine permitted payments.
 - Narrow fixture-based credit assistant and deterministic simulated quotes; no live loans, pools, yield allocation, bridge or FX.
 - AP4M [event enrollment](https://form.mastercard.com/jfe/form/SV_ewCgmPZvQhIzx8G) is confirmed submitted, not approved. Kit/access/deployment remain required. Workshop provisions describe 20 test RLUSD after approval and gas-free EVM Testnet, not verified team funds.

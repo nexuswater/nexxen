@@ -10,16 +10,18 @@ AP4M [event enrollment](https://form.mastercard.com/jfe/form/SV_ewCgmPZvQhIzx8G)
 
 | Time | Show |
 |---|---|
-| 0:00–0:35 | Business needs a paid compute/API result; RLUSD-only enabled dropdown and explicit test environment |
-| 0:35–1:10 | Fixture credit assistant explains a quote and one review/decline; prominently label no live loan |
-| 1:10–2:00 | Owner reviews supported funding on Ledger Flex; actual confirmed receipt establishes funded capacity |
-| 2:00–3:15 | Approved resource request -> HTTP 402 -> policy reservation -> isolated agent signature -> resource returned |
-| 3:15–4:10 | Over-limit rejection and human escalation; show voucher redemption separately from confirmed settlement/payout |
-| 4:10–5:00 | Linked proof, daily-cap accounting, failure handling, honest capability matrix and production dependencies |
+| 0:00–0:35 | Business needs compute/service; testnet RLUSD, owner-defined daily/weekly/monthly mandate and actual funded capacity |
+| 0:35–1:50 | Flow 1: within mandate -> HTTP 402 -> atomic reservation -> agent signature -> resource delivered, without routine hardware approval |
+| 1:50–2:20 | Flow 2: over-limit request blocks before signing and escalates to the business treasurer |
+| 2:20–3:35 | Treasurer reviews supported funding/mandate action on Ledger Flex; confirm action, recheck policy and funded/contract capacity, then retry only if permitted |
+| 3:35–4:30 | Link delivery and voucher redemption to distinct confirmed settlement/payout; show cap accounting and remaining obligations |
+| 4:30–5:00 | Honest capability matrix and future quote-with-margin -> borrow -> fund AP4M -> compute -> deliver -> earn -> repay story; borrowing remains simulated |
 
 Use the **actual approved channel cap and available test balance**. Workshop materials describe 20 test RLUSD on approval; do not reuse the older 100-unit example as if those funds exist. For example, *only if a 20-unit channel is confirmed funded*, cumulative vouchers 2 then 3 represent total 3 and an incremental second obligation of 1. An additional 18 must be rejected. Actual SDK semantics and supported units prevail.
 
-Human review does not silently raise limits. Show a review request rather than pretending it was approved. An already-issued valid voucher remains an obligation after pause.
+Human review does not silently raise limits or bypass a contract cap. Show an actual supported Ledger-approved action and the resulting policy/funded-capacity recheck; distinguish an off-chain mandate update from an on-chain funding transaction. If the SDK cannot support the action, signing is denied or sufficient capacity is unavailable, show the request staying blocked rather than pretending approval or retry succeeded. An already-issued valid voucher remains an obligation after pause.
+
+AP4M is a funded payment flow, not a second credit-card debt. The future borrowing cycle is fixture/simulation unless actually implemented and evidenced; no automatic native/EVM bridge is assumed. Lender-side screens may be discussed separately as conceptual/planned, outside the main live demo, with no live allocation or yield claim. Keep fixture credit quotes optional rather than displacing either payment flow.
 
 ## Proof checklist
 
@@ -29,7 +31,8 @@ Human review does not silently raise limits. Show a review request rather than p
 - [ ] Voucher correlation ID, cumulative values and policy version.
 - [ ] VoucherRedeemed evidence plus distinct ClaimPaid/SettlementRecorded and actual token payout, using real ABI fields.
 - [ ] QuickNode request/receipt linkage and exact network, token, SDK versions.
-- [ ] Over-cap rejection, concurrency/replay/recovery test results and human-review boundary.
+- [ ] Within-mandate autonomous purchase and over-limit block -> Ledger treasurer action -> confirmed policy/capacity recheck -> permitted retry, or truthful blocked state.
+- [ ] Daily/weekly/monthly period boundaries, concurrency/replay/recovery test results and human-review boundary; hardware approval cannot override contract limits.
 - [ ] Implemented / simulated / unavailable feature matrix, reproducible setup and hackathon commit history.
 - [ ] Ledger developer-experience feedback and supported device/app versions.
 

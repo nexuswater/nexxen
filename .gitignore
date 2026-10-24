@@ -20,3 +20,7 @@ build/
 coverage/
 .next/
 .DS_Store
+
+data/
+*.sqlite*
+node_modules/
