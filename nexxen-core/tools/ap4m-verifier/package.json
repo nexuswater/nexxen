@@ -1,0 +1,1 @@
+{"name":"nexxen-read-only-ap4m-verifier","private":true,"type":"module","engines":{"node":">=24"},"dependencies":{"@ap4m/sdk":"file:vendor/ap4m-sdk-0.10.1.tgz","ethers":"6.17.0"}}
