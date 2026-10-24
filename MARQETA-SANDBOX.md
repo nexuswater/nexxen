@@ -86,7 +86,7 @@ No reinstall is needed: place the standalone `scripts/sandbox-inspect-products.m
 node --env-file=.env.local scripts/sandbox-inspect-products.mjs
 ```
 
-This performs only GET `/cardproducts`, using the existing private environment file. It emits product token/name, active state and the documented `config.jit_funding` enabled flags for payment-card, program and program-gateway funding, plus gateway `always_fund`. Funding-source identities and gateway credentials are omitted; only their presence is reported. Missing/invalid booleans stay `null`, not assumed defaults. Three explicitly false enabled flags establish `productNonJitConfigured:true` at **product level only**. Card overrides/effective configuration remain unchecked, and the script never sets runtime mutation or non-JIT approval flags. No POST, card creation, load or authorization is performed.
+This performs only GET `/cardproducts`, using the existing private environment file. It emits product token/name, active state and the documented `config.jit_funding` enabled flags for payment-card, program and program-gateway funding, plus gateway `always_fund`. Funding-source identities and gateway credentials are omitted; only their presence is reported. Missing/invalid booleans stay `null`, not assumed defaults. Three explicitly false enabled flags establish `productNonJitConfigured:true` at **product level only**. Card association, active virtual-card state and the user’s own GPA remain unchecked, and the script never sets runtime mutation or non-JIT approval flags. No undocumented card-level JIT override field is assumed. No POST, card creation, load or authorization is performed.
 
 The paths are verified in the [official OpenAPI schema](https://raw.githubusercontent.com/marqeta/marqeta-openapi/main/yaml/CoreAPI.yaml) (`jit_funding_*_funding_source` schemas). If fields are absent, review the selected product detail rather than concluding automatic funding is disabled.
 
@@ -108,3 +108,31 @@ Only after explicit approval of **those three sandbox creations**, the script pe
 Before any POST, planned payloads/resource tokens and dispatch status are saved to `data/nexxen-sandbox-setup.json`, mode600, under an exclusive lock. This directory is already gitignored. The script first GETs each exact resource token, reuses only matching resources, and never creates another card after an unknown outcome. Use `--reconcile` for GET-only recovery; 404 after an uncertain POST remains unresolved. Do not delete state to force retries. If a stale lock is reported, stop and verify the earlier process has exited before manual recovery. No raw provider response, PAN/CVV or API credentials is saved or printed. Network identity and effective card funding behavior remain unverified unless separately checked.
 
 Verified source shapes: [create card product](https://www.marqeta.com/docs/core-api/card-products/create-card-product), [create user](https://www.marqeta.com/docs/core-api/users/create-user), [create card](https://www.marqeta.com/docs/core-api/cards/create-card), and the official OpenAPI schema linked above. Tests cover preview/no-I/O, explicit approval, pre-POST persistence, secret redaction, exact-resource reuse and unknown-outcome reconciliation. No actual API setup was run by this builder.
+
+
+## One-file isolated $1 sandbox smoke — preview, read check, then NEW approval
+
+The user subsequently reported successful local creation of the dedicated product, fixture user and ACTIVE test card. Those results are user-local evidence, not calls performed by this builder. They do not yet prove funding or authorization behavior.
+
+One downloaded file handles all stages without reinstalling:
+
+```sh
+node --env-file=.env.local ~/Downloads/nexxen-sandbox-smoke.mjs
+```
+
+Default is **preview only**, zero network/file writes. Append `--check` for four GETs: card, product, user and own USD GPA balances. Checks bind exact dedicated IDs, ACTIVE VIRTUAL_PAN card, active non-JIT product with `allow_gpa_auth:true`, active own-account user, and explicit USD available/ledger/pending-credit balances. Absent fields stay unverified. No nonexistent card JIT-override field is required; disabled gateway `always_fund:true` is inert.
+
+Only with **new explicit approval** of two simulated authorizations and one sandbox load may the same file be run with `--apply-smoke --approve-one-usd-sandbox-smoke`:
+1. Require clean zero USD balance. Send one $1 USD Mastercard-network simulator authorization to test MID11111; verify DECLINED/code1016 (insufficient funds), exact card/user/amount/currency/network and no unexpected JIT funding. Other decline codes are not the intended proof.
+2. Persist one operation token before a single $1 GPA load from `sandbox_program_funding`. Verify matching completion/code0000, then ledger/available both $1.
+3. Send one $1 authorization; verify full code0000/PENDING, exact bindings and no JIT. Read balance expecting ledger$1, available$0: a **hold**, not clearing/settlement or GPU delivery.
+
+The modern simulator request uses numeric amount and explicit USD/network; its response is singular `{transaction:{...}}`. Numeric-only merchant MID zero padding is normalized, not arbitrary merchant mismatch. The simulator supports MASTERCARD, but that does not prove production BIN/network affiliation.
+
+Intent and sanitized results persist in mode600 `data/nexxen-sandbox-smoke.json` before each POST under a lock. Do not delete or modify this state to force retries. `--reconcile-smoke` performs GET-only recovery. GPA uncertainty reconciles the persisted resource token; authorization uncertainty with a returned transaction token can read that exact transaction. If no authorization token was received, stop for manual review—there is no verified caller-token idempotency field and no automatic auth retry. Pending/unexpected outcomes never silently proceed to the next mutation. Existing product/card resources are never updated.
+
+This is an **isolated Marqeta sandbox test**, not an AP4M receipt-gated load, RLUSD conversion, real merchant purchase or deployment. No API call was made by the builder. The public-sandbox adapter was also corrected to the source-supported singular authorization response and exact identity/network bindings.
+
+Sources: [official modern simulations schema](https://raw.githubusercontent.com/marqeta/marqeta-openapi/refs/heads/main/yaml/CoreAPI-simulations-api-client.yaml), [transaction response-code guide](https://www.marqeta.com/docs/developer-guides/about-transactions), and CoreAPI.yaml above for resource/balance fields. Full mocked suite: **85 passing tests**; visual browser QA remains unverified.
+
+Apply/reconcile failures never imply that earlier POSTs did not occur. Escaping errors report unknown mutation outcome and the saved-state path for GET-only reconciliation, including a balance-read failure after successful load/authorization. Read-only `--check` failures remain explicitly non-mutating.
