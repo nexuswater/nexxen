@@ -11,8 +11,11 @@ const states=new Set(['ACTIVE','INACTIVE','SUSPENDED','TERMINATED','PENDING','CO
 const state=value=>states.has(value)?value:'UNRECOGNIZED';
 const code=value=>typeof value==='string'&&/^\d{4}$/.test(value)?value:null;
 const safeToken=value=>value==null?null:token(value);
-function loadFundingSource(v){const direct=v.funding_source_token,nested=v.funding?.source?.token;if(direct!=null&&nested!=null&&direct!==nested)fail('LOAD_FUNDING_SOURCE_CONFLICT_RECONCILE');return token(direct??nested);}
-function cleanLoad(v){return {token:token(v.token),userToken:token(v.user_token),amountUsd:usd(v.amount),currencyCode:v.currency_code==='USD'?'USD':'UNRECOGNIZED',currency:v.currency_code==='USD'?'USD':'UNRECOGNIZED',amountCents:usdCents(typeof v.amount==='number'?String(v.amount):v.amount),fundingSourceToken:loadFundingSource(v),state:state(v.state),responseCode:code(v.response?.code),transactionToken:safeToken(v.transaction_token),sandboxOnly:true};}
+function sourceObservation(v){const a=v.funding_source_token,b=v.funding?.source?.token;const meaningful=x=>typeof x==='string'&&x.trim().length>0;if(meaningful(a)&&meaningful(b)&&a!==b)fail('LOAD_FUNDING_SOURCE_CONFLICT_RECONCILE');return {topPresent:meaningful(a),nestedPresent:meaningful(b),agree:meaningful(a)&&meaningful(b)?a===b:null};}
+function cleanLoad(v){return {token:token(v.token),userToken:token(v.user_token),amountUsd:usd(v.amount),currencyCode:v.currency_code==='USD'?'USD':'UNRECOGNIZED',currency:v.currency_code==='USD'?'USD':'UNRECOGNIZED',amountCents:usdCents(typeof v.amount==='number'?String(v.amount):v.amount),sourceObservation:sourceObservation(v),canonicalSourceBindingVerified:false,state:state(v.state),responseCode:code(v.response?.code),transactionToken:safeToken(v.transaction_token),jitObserved:v.jit_funding!=null,sandboxOnly:true};}
+const balanceCents=v=>{const s=typeof v==='number'?String(v):v;if(typeof s!=='string'||!/^(0|[1-9]\d{0,7})(\.\d{1,2})?$/.test(s))fail('INVALID_USD_BALANCE');const [a,b='']=s.split('.');return Number(a)*100+Number(b.padEnd(2,'0'));};
+function validBaseline(v,userToken){return v?.verified===true&&v.currency==='USD'&&v.userToken===userToken&&['availableCents','ledgerCents','pendingCreditsCents'].every(k=>Number.isSafeInteger(v[k])&&v[k]>=0);}
+const sameBalance=(a,b)=>['availableCents','ledgerCents','pendingCreditsCents'].every(k=>a[k]===b[k]);
 /** Caller must persist the operation before invocation; this class never retries a POST. */
 export class MarqetaSandboxAdapter {
  #config;#fetch;#auth;
@@ -33,15 +36,31 @@ export class MarqetaSandboxAdapter {
  async createUser({firstName,lastName}){if(this.#config.setupApproved!==true)fail('SETUP_NOT_AUTHORIZED');if(![firstName,lastName].every(v=>typeof v==='string'&&v.length>0&&v.length<=40))fail('INVALID_FIXTURE_NAME');const v=await this.#request('POST','/users',{first_name:firstName,last_name:lastName});return {token:token(v.token),sandboxOnly:true};}
  async listCardProducts(){const v=await this.#request('GET','/cardproducts');if(!Array.isArray(v.data))fail('INVALID_RESPONSE');return v.data.map(p=>({token:token(p.token),name:typeof p.name==='string'?p.name.slice(0,80):'',active:p.active===true,nonJitProven:false}));}
  async createCard({userToken,cardProductToken}){if(this.#config.setupApproved!==true)fail('SETUP_NOT_AUTHORIZED');if(token(cardProductToken)!==this.#config.cardProductToken)fail('UNAPPROVED_CARD_PRODUCT');const v=await this.#request('POST','/cards',{user_token:token(userToken),card_product_token:cardProductToken});if(v.user_token!==userToken||v.card_product_token!==cardProductToken)fail('CARD_RESPONSE_MISMATCH_RECONCILE');return {token:token(v.token),userToken:token(v.user_token),cardProductToken:token(v.card_product_token),state:state(v.state),sandboxOnly:true};}
- async resolveSandboxFundingSource(){const v=await this.#request('GET','/fundingsources/program/sandbox_program_funding');if(v?.active!==true)fail('SANDBOX_FUNDING_SOURCE_NOT_ACTIVE');return {requestedToken:'sandbox_program_funding',canonicalToken:token(v.token),active:true,sandboxOnly:true};}
- async loadSandboxUsd({operationToken,userToken,amountUsd}){
-  this.#require(true);const requested={token:token(operationToken),user_token:token(userToken),amount:Number(this.#amount(amountUsd)),currency_code:'USD',funding_source_token:'sandbox_program_funding'};
-  const source=await this.resolveSandboxFundingSource();
-  const result=cleanLoad(await this.#request('POST','/gpaorders',requested,{funding:true}));
-  if(result.token!==requested.token||result.userToken!==requested.user_token||result.amountUsd!==usd(requested.amount)||result.currencyCode!=='USD'||result.fundingSourceToken!==source.canonicalToken)fail('LOAD_RESPONSE_MISMATCH_RECONCILE');
-  return {...result,confirmed:result.state==='COMPLETION'&&result.responseCode==='0000',verified:result.state==='COMPLETION'&&result.responseCode==='0000'};
+ async getUsdBalance(userToken){token(userToken);const v=await this.#request('GET','/balances/'+userToken);const gpa=v?.gpa;const row=gpa?.balances?.USD??gpa;if(row?.currency_code!=='USD')fail('USD_BALANCE_NOT_EXPLICIT');return {userToken,currency:'USD',availableCents:balanceCents(row.available_balance),ledgerCents:balanceCents(row.ledger_balance),pendingCreditsCents:balanceCents(row.pending_credits),verified:true};}
+ async #verifyLoad(result,{userToken,amountUsd,baseline}={}){
+  const clean=cleanLoad(result);const base={...clean,confirmed:false,verified:false,transactionVerified:false,balanceVerified:false};
+  if(!userToken||!amountUsd||!validBaseline(baseline,userToken))return base;
+  if(clean.userToken!==token(userToken)||clean.amountUsd!==usd(amountUsd)||clean.currency!=='USD')fail('LOAD_RESPONSE_MISMATCH_RECONCILE');
+  if(clean.state!=='COMPLETION'||clean.responseCode!=='0000'||!clean.transactionToken||clean.jitObserved)return base;
+  const t=await this.#request('GET','/transactions/'+clean.transactionToken);
+  const embedded=t?.gpa_order;
+  const embeddedMatches=embedded==null||(embedded.token===clean.token&&(!('user_token' in embedded)||embedded.user_token===userToken)&&(!('amount' in embedded)||usd(embedded.amount)===clean.amountUsd)&&(!('currency_code' in embedded)||embedded.currency_code==='USD'));
+  const transactionVerified=t?.token===clean.transactionToken&&t.user_token===userToken&&usd(t.amount)===clean.amountUsd&&t.currency_code==='USD'&&t.state==='COMPLETION'&&t.response?.code==='0000'&&t.jit_funding==null&&embedded?.jit_funding==null&&embeddedMatches;
+  if(!transactionVerified)return base;
+  const after=await this.getUsdBalance(userToken);
+  const balanceVerified=after.availableCents-baseline.availableCents===clean.amountCents&&after.ledgerCents-baseline.ledgerCents===clean.amountCents&&after.pendingCreditsCents===baseline.pendingCreditsCents;
+  return {...base,transactionVerified,balanceVerified,baseline:{userToken,currency:'USD',availableCents:baseline.availableCents,ledgerCents:baseline.ledgerCents,pendingCreditsCents:baseline.pendingCreditsCents,verified:true},balanceAfter:after,confirmed:balanceVerified,verified:balanceVerified};
  }
- async getLoad(operationToken){const result=await this.#request('GET','/gpaorders/'+token(operationToken),undefined,{notFound:true});if(result===null)return {found:false,token:operationToken,sandboxOnly:true};const clean=cleanLoad(result);if(clean.token!==operationToken)fail('LOAD_RESPONSE_MISMATCH_RECONCILE');const source=await this.resolveSandboxFundingSource();const verified=clean.state==='COMPLETION'&&clean.responseCode==='0000'&&clean.currency==='USD'&&clean.fundingSourceToken===source.canonicalToken;return {...clean,found:true,confirmed:verified,verified};}
+ async loadSandboxUsd({operationToken,userToken,amountUsd,baseline}){
+  this.#require(true);const requested={token:token(operationToken),user_token:token(userToken),amount:Number(this.#amount(amountUsd)),currency_code:'USD',funding_source_token:'sandbox_program_funding'};
+  if(baseline!==undefined&&!validBaseline(baseline,userToken))fail('INVALID_DURABLE_BASELINE');
+  const before=await this.getUsdBalance(userToken);
+  if(baseline&&!sameBalance(before,baseline))fail('DURABLE_BASELINE_CHANGED');
+  const result=await this.#request('POST','/gpaorders',requested,{funding:true});
+  if(result?.token!==operationToken)fail('LOAD_RESPONSE_MISMATCH_RECONCILE');
+  return this.#verifyLoad(result,{userToken,amountUsd,baseline:baseline??before});
+ }
+ async getLoad(operationToken,expectation={}){const result=await this.#request('GET','/gpaorders/'+token(operationToken),undefined,{notFound:true});if(result===null)return {found:false,token:operationToken,sandboxOnly:true};if(result.token!==operationToken)fail('LOAD_RESPONSE_MISMATCH_RECONCILE');return {...await this.#verifyLoad(result,expectation),found:true};}
  async authorizeSimulation({cardToken,amountUsd,merchantId,network}){
   this.#require(true);if(token(cardToken)!==this.#config.cardToken||merchantId!==this.#config.merchantId||network!==this.#config.network||!['VISA','MASTERCARD','DISCOVER'].includes(network))fail('UNAPPROVED_SIMULATION_SCOPE');
   const amount=this.#amount(amountUsd);const response=await this.#request('POST','/simulations/cardtransactions/authorization',{amount:Number(amount),currency_code:'USD',card_token:cardToken,card_acceptor:{mid:merchantId},network},{funding:true});
@@ -50,6 +69,6 @@ export class MarqetaSandboxAdapter {
   if(!t||t.card_token!==cardToken||!sameMid(t.card_acceptor?.mid,merchantId)||t.currency_code!=='USD'||t.type!=='authorization'||t.network!==network||(this.#config.userToken!==undefined&&t.user_token!==this.#config.userToken))fail('AUTH_RESPONSE_UNVERIFIED_RECONCILE');
   let actualAmount;try{actualAmount=usd(t.amount);}catch{fail('AUTH_RESPONSE_UNVERIFIED_RECONCILE');}
   if(actualAmount!==amount)fail('AUTH_RESPONSE_UNVERIFIED_RECONCILE');
-  return {transactionToken:token(t.token),cardToken,amountUsd:amount,currencyCode:'USD',network,state:state(t.state),responseCode:code(t.response?.code),approved:t.response?.code==='0000'&&t.state==='PENDING',sandboxOnly:true,settlementVerified:false,gpuDeliveryVerified:false};
+  return {transactionToken:token(t.token),cardToken,amountUsd:amount,currencyCode:'USD',network,state:state(t.state),responseCode:code(t.response?.code),jitObserved:t.jit_funding!=null||t.gpa_order?.jit_funding!=null,approved:t.response?.code==='0000'&&t.state==='PENDING'&&t.jit_funding==null&&t.gpa_order?.jit_funding==null,sandboxOnly:true,settlementVerified:false,gpuDeliveryVerified:false};
  }
 }

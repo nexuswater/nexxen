@@ -31,6 +31,7 @@ export class SandboxFundingGate {
  constructor({path=':memory:',adapter,verifyPayout,lookupApprovedOrder,enabled=false}={}){
   this.adapter=adapter;this.verifyPayout=verifyPayout;this.lookupApprovedOrder=lookupApprovedOrder;this.enabled=enabled;this.db=new DatabaseSync(path);this.db.exec('PRAGMA busy_timeout=5000');
   this.db.exec(`CREATE TABLE IF NOT EXISTS sandbox_funding (id TEXT PRIMARY KEY, order_id TEXT UNIQUE NOT NULL, chain INTEGER NOT NULL, tx_hash TEXT NOT NULL, log_index INTEGER NOT NULL, operation_token TEXT UNIQUE NOT NULL, amount_cents INTEGER NOT NULL, user_token TEXT NOT NULL, order_digest TEXT NOT NULL, status TEXT NOT NULL, UNIQUE(chain,tx_hash,log_index));`);
+  if(!this.db.prepare('PRAGMA table_info(sandbox_funding)').all().some(c=>c.name==='balance_baseline'))this.db.exec('ALTER TABLE sandbox_funding ADD COLUMN balance_baseline TEXT');
  }
  close(){this.db.close();}
  guard(){if(!this.enabled||!this.adapter||typeof this.verifyPayout!=='function'||typeof this.lookupApprovedOrder!=='function')throw new Error('Sandbox receipt gate disabled or missing verified runtime dependencies');}
@@ -41,10 +42,10 @@ export class SandboxFundingGate {
   this.db.exec('BEGIN IMMEDIATE');try{
    const old=this.db.prepare('SELECT * FROM sandbox_funding WHERE order_id=?').get(orderId);
    if(old){if(!eq(old.tx_hash,txHash)||old.log_index!==logIndex||old.amount_cents!==order.amountUsdCents||old.user_token!==order.userToken||old.order_digest!==orderDigest(order))throw new Error('Existing order is bound to a different operation');this.db.exec('COMMIT');return this.publicStatus(old);}
-   const id=randomUUID();this.db.prepare('INSERT INTO sandbox_funding VALUES (?,?,?,?,?,?,?,?,?,?)').run(id,orderId,1449000,txHash.toLowerCase(),logIndex,randomUUID(),order.amountUsdCents,order.userToken,orderDigest(order),'awaiting_payout');this.db.exec('COMMIT');return this.status(id);
+   const id=randomUUID();this.db.prepare('INSERT INTO sandbox_funding (id,order_id,chain,tx_hash,log_index,operation_token,amount_cents,user_token,order_digest,status) VALUES (?,?,?,?,?,?,?,?,?,?)').run(id,orderId,1449000,txHash.toLowerCase(),logIndex,randomUUID(),order.amountUsdCents,order.userToken,orderDigest(order),'awaiting_payout');this.db.exec('COMMIT');return this.status(id);
   }catch(e){this.db.exec('ROLLBACK');throw e;}
  }
- publicStatus(row){return {id:row.id,orderId:row.order_id,status:row.status,usdCents:row.amount_cents,conversion:'simulated — no RLUSD sent to Marqeta',cardApi:row.status==='sandbox_funded'?'sandbox GPA load verified':'not verified',authorization:'not attempted',clearing:'not verified',gpuDelivery:'not verified'};}
+ publicStatus(row){return {id:row.id,orderId:row.order_id,status:row.status,usdCents:row.amount_cents,conversion:'simulated — no RLUSD sent to Marqeta',canonicalSourceBindingVerified:false,cardApi:row.status==='sandbox_funded'?'sandbox GPA load verified':'not verified',authorization:'not attempted',clearing:'not verified',gpuDelivery:'not verified'};}
  row(id){const row=this.db.prepare('SELECT * FROM sandbox_funding WHERE id=?').get(id);if(!row)throw new Error('Unknown funding operation');return row;}
  status(id){return this.publicStatus(this.row(id));}
  async run(id){
@@ -52,16 +53,19 @@ export class SandboxFundingGate {
   const order=this.lookupApprovedOrder(row.order_id);if(!order||order.sandboxLoadApproved!==true||order.amountUsdCents!==row.amount_cents||order.userToken!==row.user_token||!order.nonJitProductVerified||order.reservationActive!==true||row.order_digest!==orderDigest(order))throw new Error('Approval changed; operation remains blocked');
   const proof=await this.verifyPayout(order,{txHash:row.tx_hash,logIndex:row.log_index});
   if(proof?.verification!=='canonical-ap4m-payout'||proof.chainId!==1449000||!eq(proof.txHash,row.tx_hash)||proof.logIndex!==row.log_index)throw new Error('Independent canonical payout proof missing');
+  const observed=await this.adapter.getUsdBalance(row.user_token);
+  const baseline={verified:observed?.verified,currency:observed?.currency,userToken:observed?.userToken,availableCents:observed?.availableCents,ledgerCents:observed?.ledgerCents,pendingCreditsCents:observed?.pendingCreditsCents};
+  if(baseline?.verified!==true||baseline.currency!=='USD'||baseline.userToken!==row.user_token||!['availableCents','ledgerCents','pendingCreditsCents'].every(k=>Number.isSafeInteger(baseline[k])))throw new Error('Verified explicit USD baseline required before dispatch');
   // CAS is the dispatch claim across concurrent processes; persisted BEFORE external POST.
-  const claimed=this.db.prepare("UPDATE sandbox_funding SET status='dispatching' WHERE id=? AND status='awaiting_payout'").run(id);
+  const claimed=this.db.prepare("UPDATE sandbox_funding SET status='dispatching', balance_baseline=? WHERE id=? AND status='awaiting_payout'").run(JSON.stringify(baseline),id);
   if(!claimed.changes)return this.status(id);
-  try{const load=await this.adapter.loadSandboxUsd({operationToken:row.operation_token,userToken:row.user_token,amountUsd:(row.amount_cents/100).toFixed(2)});this.acceptLoad(row,load);}
+  try{const load=await this.adapter.loadSandboxUsd({operationToken:row.operation_token,userToken:row.user_token,amountUsd:(row.amount_cents/100).toFixed(2),baseline});this.acceptLoad(row,load);}
   catch {this.db.prepare("UPDATE sandbox_funding SET status='unknown' WHERE id=? AND status='dispatching'").run(id);}
   return this.status(id);
  }
  acceptLoad(row,load){
-  if(!load||load.token!==row.operation_token||load.userToken!==row.user_token||load.currency!=='USD'||load.amountCents!==row.amount_cents||load.verified!==true)throw new Error('Sandbox load response did not verify bound operation');
+  if(!load||load.token!==row.operation_token||load.userToken!==row.user_token||load.currency!=='USD'||load.amountCents!==row.amount_cents||load.verified!==true||load.transactionVerified!==true||load.balanceVerified!==true||load.canonicalSourceBindingVerified!==false)throw new Error('Sandbox load response did not verify bound operation');
   this.db.prepare("UPDATE sandbox_funding SET status='sandbox_funded' WHERE id=? AND status IN ('dispatching','unknown')").run(row.id);
  }
- async reconcile(id){this.guard();const row=this.row(id);if(!['dispatching','unknown'].includes(row.status))return this.status(id);try{const load=await this.adapter.getLoad(row.operation_token);this.acceptLoad(row,load);}catch{/* 404/timeouts/mismatch remain unresolved. Never release or replay POST. */}return this.status(id);}
+ async reconcile(id){this.guard();const row=this.row(id);if(!['dispatching','unknown'].includes(row.status))return this.status(id);try{const load=await this.adapter.getLoad(row.operation_token,{userToken:row.user_token,amountUsd:(row.amount_cents/100).toFixed(2),baseline:row.balance_baseline?JSON.parse(row.balance_baseline):null});this.acceptLoad(row,load);}catch{/* 404/timeouts/mismatch remain unresolved. Never release or replay POST. */}return this.status(id);}
 }
