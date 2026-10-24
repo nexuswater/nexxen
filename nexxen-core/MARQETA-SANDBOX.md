@@ -136,3 +136,20 @@ This is an **isolated Marqeta sandbox test**, not an AP4M receipt-gated load, RL
 Sources: [official modern simulations schema](https://raw.githubusercontent.com/marqeta/marqeta-openapi/refs/heads/main/yaml/CoreAPI-simulations-api-client.yaml), [transaction response-code guide](https://www.marqeta.com/docs/developer-guides/about-transactions), and CoreAPI.yaml above for resource/balance fields. Full mocked suite: **85 passing tests**; visual browser QA remains unverified.
 
 Apply/reconcile failures never imply that earlier POSTs did not occur. Escaping errors report unknown mutation outcome and the saved-state path for GET-only reconciliation, including a balance-read failure after successful load/authorization. Read-only `--check` failures remain explicitly non-mutating.
+
+
+## Existing-load recovery: request alias versus canonical program source
+
+Actual user-local GET evidence showed the expected $1 order token/user/currency, COMPLETION/code0000, and USD GPA ledger/available both $1 with no pending credits. Both returned source identifiers agreed, but were a canonical ID rather than the request alias `sandbox_program_funding`. That is **not a failed load**. No second load is authorized or needed.
+
+`scripts/nexxen-load-diagnostic.mjs` provides the bounded GET-only existing-order/balance inspection without raw response, credential or PAN output. The recovery file is uniquely named `nexxen-sandbox-resume.mjs` to avoid choosing an old downloaded smoke script. It has no GPA-load POST or negative-authorization path.
+
+Preview the recovery file from the existing project directory:
+```sh
+node --env-file=.env.local ~/Downloads/nexxen-sandbox-resume.mjs
+```
+`--check` reads without local writes. `--reconcile` performs GET-only provider inspection and updates the existing local receipt state if proof matches. It resolves the approved alias with GET `/fundingsources/program/sandbox_program_funding`, verifies the returned active canonical resource with GET `/fundingsources/program/{canonicalToken}`, and binds that ID to the agreeing GPA source fields. Missing/contradictory alias mapping remains blocked; neither names, default flags nor the account balance substitutes for source binding. It also verifies the exact existing negative transaction and current dedicated card/product/user/balance.
+
+Only `--complete-approved-positive` can send **the one remaining originally approved positive $1 authorization**, after all evidence checks. It never creates another load or repeats the negative authorization. Intent is persisted first; uncertain outcomes preserve state and cannot be blindly retried. Repeated successful completion only reads the saved/returned transaction. Keep `data/nexxen-sandbox-smoke.json`; never delete it to restart the test. Final approval/hold is still not clearing, GPU delivery or AP4M funding.
+
+The general adapter and normal smoke implementation now resolve the requested alias through authenticated GET before validating a returned canonical source ID. Top-level and nested source IDs must agree if both are supplied; state, response code, amount, currency and user checks remain strict. Source: documented GET `/fundingsources/program/{token}` in the official CoreAPI schema. No API call or load replay was performed by this builder.
