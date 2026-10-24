@@ -1,0 +1,38 @@
+[
+  {
+    "id": "summarize-url",
+    "name": "Summarize a web page",
+    "seller": "GistBot",
+    "description": "Reads any public web page and returns a short summary with key points.",
+    "input": "A public URL, e.g. https://xrpl.org",
+    "port": 4308,
+    "priceRlusd": "0.001"
+  },
+  {
+    "id": "translate",
+    "name": "Translate text",
+    "seller": "Polyglot AI",
+    "description": "Translates text into any language, keeping tone and formatting.",
+    "input": "The text, and the target language (default: Hindi)",
+    "port": 4309,
+    "priceRlusd": "0.001"
+  },
+  {
+    "id": "generate-image",
+    "name": "Generate an image",
+    "seller": "PixelForge",
+    "description": "Creates an original 1024x1024 image from a text prompt.",
+    "input": "A prompt describing the image",
+    "port": 4310,
+    "priceRlusd": "0.001"
+  },
+  {
+    "id": "sentiment",
+    "name": "Analyze sentiment",
+    "seller": "ToneScope",
+    "description": "Scores the sentiment and tone of a text, with the phrases that drive it.",
+    "input": "The text to analyze, e.g. a review or tweet",
+    "port": 4311,
+    "priceRlusd": "0.001"
+  }
+]
