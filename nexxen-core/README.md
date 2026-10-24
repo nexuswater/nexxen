@@ -25,7 +25,7 @@ The app enforces loopback binding: `HOST` accepts only `127.0.0.1`, `localhost`,
 
 ## What is not live
 
-All 20 RLUSD of demo capacity is **fixture money**. No network transaction, resource provisioning, signature, Ledger action, live AP4M payment, or payout has occurred. AP4M is a funded payment rail, **not a credit card or loan**. The actual sponsor-approved test token must be verified before live integration. No bridge, real card issuance, native loan, lender deposit or investment implementation exists. The main **GPU funding cycle** models RLUSD → approved-provider stand-in → fixture USD card prefunding → fictional GPU merchant charge. Conversion/rate/fee and every external outcome are explicitly simulated; no issuer, PAN, actual acceptance, conversion or purchase. RLUSD funding and USD spend remain separate, with source budget counted once and no invented income/debt. See [Card adapter](CARD-ADAPTER.md).
+All 20 RLUSD of demo capacity is **fixture money**. This fixture app submits no network transactions, provisions no resources, and performs no signatures, Ledger actions, live AP4M payments or payouts. Separate historical AP4M claim and Marqeta sandbox observations are displayed as timestamped or historical evidence, not as outcomes of this app. AP4M is a funded payment rail, **not a credit card or loan**. The actual sponsor-approved test token must be verified before live integration. No bridge, real card issuance, native loan, lender deposit or investment implementation exists. The main **GPU funding cycle** models RLUSD → approved-provider stand-in → fixture USD card prefunding → fictional GPU merchant charge. The handoff uses independent RLUSD and USD fixtures without an exchange rate; every external outcome is explicitly simulated; no issuer, PAN, actual acceptance, conversion or purchase. RLUSD funding and USD spend remain separate, with source budget counted once and no invented income/debt. See [Card adapter](CARD-ADAPTER.md).
 
 The Ledger review deliberately remains pending. A fixture policy edit is not device authorization and cannot expand the fixed fixture channel cap. Existing blocked orders remain immutable; a new request gets a new policy check. The app has one business and one agent, not production multitenant authorization.
 
@@ -33,7 +33,7 @@ Live adapters remain separate and fail closed until verified configuration and s
 
 ## Quick rehearsal
 
-Start with **GPU funding cycle**: run both-legs-complete, funding-failed, GPU-declined and large-spend-review scenarios. It is one modeled lifecycle; Marqeta RLUSD support is unverified. The following AP4M-only actions are diagnostic tests.
+Start with **GPU funding cycle** (`/#cards`): the default rehearsal reserves 0.01 fixture RLUSD and independently allocates $0.01 fixture USD. No exchange rate is asserted. The 0.02 RLUSD review example exceeds the dedicated 0.01 rehearsal cap and remains blocked. Shared owner limits and capacity still apply. Real historical AP4M and Marqeta observations stay separate. See [rehearsal notes](SIMULATED-HANDOFF.md). The following AP4M-only actions are diagnostic tests.
 
 
 1. Buy **Inference burst (2 RLUSD)**: the receipt explicitly distinguishes implemented reservation from fixture signature/delivery/redemption/payout.
