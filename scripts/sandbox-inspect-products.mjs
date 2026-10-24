@@ -8,10 +8,9 @@ export function summarizeProduct(p){
  const j=p?.config?.jit_funding;
  const flags={paymentcardEnabled:boolean(j?.paymentcard_funding_source?.enabled),programEnabled:boolean(j?.program_funding_source?.enabled),programGatewayEnabled:boolean(j?.programgateway_funding_source?.enabled),programGatewayAlwaysFund:boolean(j?.programgateway_funding_source?.always_fund)};
  const enabled=[flags.paymentcardEnabled,flags.programEnabled,flags.programGatewayEnabled];
- const contradiction=flags.programGatewayAlwaysFund===true&&flags.programGatewayEnabled!==true;
- const off=enabled.every(v=>v===false)&&!contradiction;
- const mode=contradiction?'contradictory-review-required':enabled.some(v=>v===true)?'jit-enabled':off?'jit-explicitly-disabled':'unknown-fields-missing-or-invalid';
- return {productToken:token(p?.token),productName:text(p?.name),active:boolean(p?.active),jit:flags,programFundingSourceConfigured:typeof j?.program_funding_source?.funding_source_token==='string'&&j.program_funding_source.funding_source_token.length>0,programGatewayFundingSourceConfigured:typeof j?.programgateway_funding_source?.funding_source_token==='string'&&j.programgateway_funding_source.funding_source_token.length>0,jitAssessment:mode,productNonJitConfigured:off,cardEffectiveConfigVerified:false,needsCardOverrideVerification:true,strictPrefundingCandidate:off&&p?.active===true,scope:'Product response fields only; no funding/authorization test or runtime policy update'};
+ const off=enabled.every(v=>v===false);
+ const mode=enabled.some(v=>v===true)?'jit-enabled':off?'jit-explicitly-disabled':'unknown-fields-missing-or-invalid';
+ return {productToken:token(p?.token),productName:text(p?.name),active:boolean(p?.active),jit:flags,programGatewayAlwaysFundEffective:flags.programGatewayEnabled===false?false:flags.programGatewayEnabled===true?flags.programGatewayAlwaysFund:null,programFundingSourceConfigured:typeof j?.program_funding_source?.funding_source_token==='string'&&j.program_funding_source.funding_source_token.length>0,programGatewayFundingSourceConfigured:typeof j?.programgateway_funding_source?.funding_source_token==='string'&&j.programgateway_funding_source.funding_source_token.length>0,jitAssessment:mode,productNonJitConfigured:off,cardEffectiveConfigVerified:false,needsCardOverrideVerification:true,strictPrefundingCandidate:off&&p?.active===true,scope:'Product response fields only; no funding/authorization test or runtime policy update'};
 }
 export async function inspectProducts({env=process.env,fetchImpl=fetch}={}){
  const reject=code=>{throw new Error(code);};
