@@ -74,3 +74,18 @@ The npm command reads **process environment only**; it does not automatically lo
 The check uses one **GET `/cardproducts`** with Basic auth, pinned public-sandbox host, no redirects, no retries and a 15-second timeout. It prints only connection status and returned/active product counts—not credential values, product names/tokens, PAN/CVV or provider bodies. Read access is separately authorized by `MARQETA_SANDBOX_READ_ENABLED`; it does **not** set `approvedSandboxOperations`, create a user/card, load funds or authorize a charge.
 
 A successful check means only that the sandbox catalog read worked. It does not verify a non-JIT product, AP4M funding, issuer authorization, settlement or GPU delivery. On HTTP401/403, stop and check assigned sandbox access/credentials in the official dashboard; do not bypass restrictions. If the assigned API URL differs from the pinned URL above, stop for explicit adapter review—do not change a hostname allowlist casually. Share only sanitized check output if help is needed.
+
+
+## Next read-only step: inspect the selected product's JIT configuration
+
+The user reports the authenticated catalog read succeeded locally (one active product, no mutations). The earlier `nonJitProductVerified:false` meant **not inspected**, not that JIT was proven enabled.
+
+No reinstall is needed: place the standalone `scripts/sandbox-inspect-products.mjs` in the existing project and run:
+
+```sh
+node --env-file=.env.local scripts/sandbox-inspect-products.mjs
+```
+
+This performs only GET `/cardproducts`, using the existing private environment file. It emits product token/name, active state and the documented `config.jit_funding` enabled flags for payment-card, program and program-gateway funding, plus gateway `always_fund`. Funding-source identities and gateway credentials are omitted; only their presence is reported. Missing/invalid booleans stay `null`, not assumed defaults. Three explicitly false enabled flags, without contradictory gateway funding, establish `productNonJitConfigured:true` at **product level only**. Card overrides/effective configuration remain unchecked, and the script never sets runtime mutation or non-JIT approval flags. No POST, card creation, load or authorization is performed.
+
+The paths are verified in the [official OpenAPI schema](https://raw.githubusercontent.com/marqeta/marqeta-openapi/main/yaml/CoreAPI.yaml) (`jit_funding_*_funding_source` schemas). If fields are absent, review the selected product detail rather than concluding automatic funding is disabled.
