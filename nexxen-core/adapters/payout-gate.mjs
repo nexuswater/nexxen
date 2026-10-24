@@ -5,7 +5,7 @@ const HASH=/^0x[0-9a-fA-F]{64}$/;
 const ADDRESS=/^0x[0-9a-fA-F]{40}$/;
 const TRANSFER='0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 const eq=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.toLowerCase()===b.toLowerCase();
-const orderDigest=o=>createHash('sha256').update(JSON.stringify([o.channelId,o.claimId,o.payout,o.expectedRlusdBaseUnits,o.amountUsdCents,o.userToken,o.reservationId])).digest('hex');
+const orderDigest=o=>createHash('sha256').update(JSON.stringify([o.channelId,o.claimId,o.settlementDigest??null,o.payout,o.expectedRlusdBaseUnits,o.amountUsdCents,o.userToken,o.reservationId])).digest('hex');
 const topicAddress=a=>'0x'+a.slice(2).toLowerCase().padStart(64,'0');
 /** Read-only canonical payout verifier. Claim resolver must independently bind payout to AP4M claim. */
 export function createPayoutVerifier({rpc,resolveClaim,config}={}){

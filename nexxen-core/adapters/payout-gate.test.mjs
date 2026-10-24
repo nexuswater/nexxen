@@ -28,3 +28,4 @@ test('real adapter + durable gate verify malformed source metadata using indepen
   assert.fail('unexpected endpoint '+p);
  }});const g=setup({adapter});try{const id=g.enqueue(evidence).id;const r=await g.run(id);assert.equal(r.status,'sandbox_funded');assert.equal(posts,1);assert.equal(r.canonicalSourceBindingVerified,false);assert.equal(r.authorization,'not attempted');assert.doesNotMatch(JSON.stringify(r),/fixture-app|fixture-admin/);await g.run(id);assert.equal(posts,1);}finally{g.close();}
 });
+test('changing expected settlement digest after enqueue blocks later dispatch',async()=>{let current={...order,settlementDigest:'0x'+'a'.repeat(64)};const g=setup({lookupApprovedOrder:()=>current});try{const id=g.enqueue(evidence).id;current={...current,settlementDigest:'0x'+'b'.repeat(64)};await assert.rejects(g.run(id),/Approval changed/);}finally{g.close();}});
