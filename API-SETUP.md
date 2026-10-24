@@ -6,7 +6,9 @@
 
 The event workshop materials reviewed by Dot describe approval-based access, **20 test RLUSD automatically funded on approval**, gas-free XRPL EVM Testnet use, an SDK with typed ABI/signing, and a Platform API for channel/settlement lifecycle. These are workshop provisions, not a verified balance or unlimited funding entitlement for this team.
 
-Obtain the exact event access link/approval and kit from organizer-provided materials. None of the eight reviewed workshop photos shows a signup URL; the mentor slide identifies Jaya Mandlik for technical orientation/kit support. No outreach has been made. Do not invent a generic Developers-portal product selection for AP4M. Required inputs:
+**Enrollment submitted:** the official [XRPL Hackathon 2026 Mastercard AP4M registration form](https://form.mastercard.com/jfe/form/SV_ewCgmPZvQhIzx8G) confirmed that the team’s details were successfully recorded. This is submission confirmation only—not approval, credentials, kit delivery or verified test funding. Do not resubmit by default.
+
+The [original workshop slides](https://docs.google.com/presentation/d/1l-SIRHjXO-5IxkCFKT5szAcs2u-zg_dT/edit?slide=id.p1#slide=id.p1) currently require viewer access for the team account. Do not bypass that access restriction through alternate retrieval/export routes. Jaya Mandlik is identified in reviewed materials for technical orientation/kit support. The exact kit/SDK and deployment details remain pending; a generic Developers-portal product selection is not a replacement. Required inputs:
 
 - Approved project/participant access and legitimate credentials stored privately.
 - Kit/SDK version, installation instructions, authoritative ABI and API base URL.

@@ -2,7 +2,9 @@
 
 ## Verified workshop framing
 
-Mastercard workshop slides reviewed by Dot specify a **five-minute live demo** and rubric: **real-world utility 25%, trust 25%, technical implementation 25%, path to production 15%, demo/story 10%**. This supersedes the earlier generic 25%-each rubric for Mastercard positioning. Final event-wide submission deadline, timezone and upload requirements still need confirmation.
+Mastercard workshop slides reviewed by Dot specify a **five-minute live demo** and rubric: **real-world utility 25%, trust 25%, technical implementation 25%, path to production 15%, demo/story 10%**. This supersedes the earlier generic 25%-each rubric for Mastercard positioning. The [organizer schedule](https://hackathons.xrpl-commons.org/hackathons/ai-fintech-xrp-ledger-hackathon-f78ed817/schedule/6abe686a511cbb095112c1ee) lists submissions **Sunday, October 25, 12:30–1:00 PM EDT** (16:30–17:00 UTC). Target demo and submission materials ready by **12:30 PM EDT**. This published window does not establish the portal’s hard technical cutoff; upload requirements remain unverified.
+
+AP4M [event enrollment](https://form.mastercard.com/jfe/form/SV_ewCgmPZvQhIzx8G) is confirmed submitted. Approval, kit delivery and actual test funds are still unverified, so the live run below remains conditional.
 
 ## Run of show
 
