@@ -30,6 +30,10 @@
     "@ai-sdk/openai": "^4.0.102",
     "@ai-sdk/openai-compatible": "^3.0.78",
     "@ap4m/sdk": "https://hackathon.ap4m.build/sdk/ap4m-sdk.tgz",
+    "@ledgerhq/context-module": "2.7.0",
+    "@ledgerhq/device-management-kit": "1.11.0",
+    "@ledgerhq/device-signer-kit-ethereum": "1.18.2",
+    "@ledgerhq/device-transport-kit-web-hid": "1.2.4",
     "@openuidev/lang-core": "1.0.1",
     "@openuidev/react-lang": "^1.0.1",
     "@openuidev/react-ui": "^0.18.1",
@@ -39,6 +43,7 @@
     "next": "^16.3.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "rxjs": "7.8.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {

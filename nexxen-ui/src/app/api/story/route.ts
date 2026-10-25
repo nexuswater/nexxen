@@ -46,7 +46,7 @@ type Body = {
   orderId?: string;
   approvalId?: string;
   signature?: string;
-  via?: "wallet" | "pasted";
+  via?: "wallet" | "pasted" | "ledger";
 };
 
 export async function POST(req: Request) {
@@ -72,7 +72,9 @@ export async function POST(req: Request) {
         break;
       }
       case "submit":
-        s = submitApproval(String(b.approvalId), String(b.signature).trim(), b.via === "wallet" ? "wallet" : "pasted");
+        // The signature is verified against OWNER_APPROVER_ADDRESS inside submitApproval,
+        // so an untrusted `via` label cannot widen what a signature is allowed to do.
+        s = submitApproval(String(b.approvalId), String(b.signature).trim(), b.via === "wallet" ? "wallet" : b.via === "ledger" ? "ledger" : "pasted");
         break;
       case "deny":
         s = denyApproval(String(b.approvalId));

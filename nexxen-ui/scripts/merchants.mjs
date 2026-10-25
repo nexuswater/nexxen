@@ -8,6 +8,7 @@
  * .env.example). Each server redeems Vouchers on-chain from
  * MERCHANT_SUBMITTER_KEY, or the Agent wallet when unset, which needs XRP for gas.
  */
+import { boundedSubmitter } from "./bounded-submitter.mjs";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { ethers } from "ethers";
@@ -39,7 +40,7 @@ if (!MERCHANT_ID || !MERCHANT_PAYOUT || !MERCHANT_SUBMITTER_KEY) {
 const context = await loadX402Context(API);
 const config = await (await fetch(`${API}/public/config`)).json();
 const provider = new ethers.JsonRpcProvider(process.env.AP4M_RPC_URL || config.network.rpcUrl);
-const submitter = new ethers.Wallet(MERCHANT_SUBMITTER_KEY, provider);
+const submitter = boundedSubmitter(new ethers.Wallet(MERCHANT_SUBMITTER_KEY, provider), provider);
 
 const running = [];
 for (const s of services) {

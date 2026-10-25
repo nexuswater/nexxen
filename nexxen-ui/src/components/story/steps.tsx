@@ -1,6 +1,7 @@
 "use client";
 import { useWallet } from "@/components/wallet-bar";
 import { useEffect, useMemo, useState } from "react";
+import { LedgerSign } from "./ledger-sign";
 import type { Approval, CardOrder, Proof, StoryData } from "./use-story";
 
 type Act = (body: Record<string, unknown>) => Promise<StoryData | null>;
@@ -611,7 +612,12 @@ export function ApprovalStep({ data, act, busy, go }: StepProps) {
             <div>
               <dt>Signed</dt>
               <dd>
-                {consumed.verifiedAt && utc(consumed.verifiedAt)} · via {consumed.via === "wallet" ? "browser wallet" : "pasted signature"}
+                {consumed.verifiedAt && utc(consumed.verifiedAt)} · via{" "}
+                {consumed.via === "ledger"
+                  ? `${data.policy.ownerDevice} over WebHID`
+                  : consumed.via === "wallet"
+                    ? "browser wallet"
+                    : "pasted signature"}
               </dd>
             </div>
             <div>
@@ -644,19 +650,20 @@ export function ApprovalStep({ data, act, busy, go }: StepProps) {
               <span className="nxd-eyebrow">Expires in</span>
               <b>{left?.expired ? "expired" : left?.label}</b>
             </div>
-            <button className="nxd-btn nxd-btn-primary" disabled={!owner || !!busy || left?.expired} onClick={() => signWithWallet(pending)}>
-              {busy === "submit" ? "Verifying…" : `Sign on ${data.policy.ownerDevice}`}
-            </button>
-            <small className="nxd-dim">Uses the browser wallet that has the Ledger connected (personal_sign).</small>
+            {owner && <LedgerSign pending={pending} policy={data.policy} act={act} expired={!!left?.expired} />}
             <details>
-              <summary>Paste a signature instead</summary>
+              <summary>Other ways to sign</summary>
+              <button className="nxd-btn" disabled={!owner || !!busy || left?.expired} onClick={() => signWithWallet(pending)}>
+                {busy === "submit" ? "Verifying…" : "Sign via browser wallet"}
+              </button>
+              <small className="nxd-dim">Uses a browser wallet that has the Ledger connected (personal_sign), instead of talking to the device directly.</small>
               <textarea value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder="0x… (65-byte signature)" rows={3} />
               <button
                 className="nxd-btn"
                 disabled={!owner || !pasted.trim() || !!busy}
                 onClick={() => act({ action: "submit", approvalId: pending.id, signature: pasted.trim(), via: "pasted" })}
               >
-                Verify signature
+                Verify pasted signature
               </button>
             </details>
             {walletErr && <p className="nxd-error">{walletErr}</p>}

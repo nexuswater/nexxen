@@ -29,7 +29,7 @@ export const CARD_ITEMS = [
     serviceId: "generate-image",
     prompt: "Studio product shot of a matte black wireless speaker on a marble table, soft light, 3D render",
   },
-  { id: "gpu-large", name: "A100 GPU · 2 hours", merchant: "CloudGPU · fictional card merchant", amount: "3.50", rail: "card" },
+  { id: "gpu-large", name: "A100 GPU · 2 hours", merchant: "CloudGPU · fictional card merchant", amount: "0.02", rail: "card" },
 ] as const;
 
 export const JOB = {
@@ -42,13 +42,17 @@ export const JOB = {
 export function policy() {
   const owner = process.env.OWNER_APPROVER_ADDRESS?.trim();
   return {
-    cardLimit: Number(process.env.STORY_CARD_LIMIT_RLUSD || "2").toFixed(2),
-    exceptionMax: Number(process.env.STORY_EXCEPTION_MAX_RLUSD || "5").toFixed(2),
+    cardLimit: Number("0.01").toFixed(2),
+    exceptionMax: Number("0.02").toFixed(2),
     blockSize: env().blockSize,
     maxPrice: env().maxPrice,
     owner: owner && ethers.isAddress(owner) ? ethers.getAddress(owner) : null,
     ownerDevice: process.env.OWNER_APPROVER_DEVICE || "Ledger Flex",
     approvalTtlSeconds: 300,
+    // User-observed device readiness, not device attestation: the direct Ledger panel refuses to
+    // sign unless both are configured and the connected device still reports the same app version.
+    observedFirmware: process.env.OWNER_APPROVER_FIRMWARE?.trim() || null,
+    observedEthereumApp: process.env.OWNER_APPROVER_ETH_APP?.trim() || null,
   };
 }
 
@@ -84,7 +88,7 @@ export type Approval = {
   expectedSigner: string | null;
   signer?: string;
   signature?: string;
-  via?: "wallet" | "pasted";
+  via?: "wallet" | "pasted" | "ledger";
   verifiedAt?: string;
   reservationId?: string;
 };
@@ -277,21 +281,37 @@ export async function buyOnCard(itemId: string) {
   return record({ itemId: item.id, item: item.name, merchant: item.merchant, amount: item.amount, status, reason, checks, rail: "card" });
 }
 
+/**
+ * The owner reviews this message on a hardware screen that renders printable ASCII only, and the
+ * direct Ledger panel refuses to forward anything else. Item and merchant names are free text
+ * (they carry "·"), so the whole assembled challenge is canonicalised rather than field by field.
+ */
+const canonicalAscii = (text: string) =>
+  text
+    .replace(/[·•]/g, "-")
+    .replace(/[‐-―]/g, "-")
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[^\x20-\x7e\n]/g, "")
+    .replace(/[ \t]{2,}/g, " ");
+
 function challengeMessage(order: CardOrder, agent: string, expiresAt: string, nonce: string) {
   const p = policy();
-  return [
-    "NEXXEN OWNER APPROVAL - ONE EXCEPTION",
-    "Business: NEXXEN demo business",
-    `Agent: ${agent}`,
-    `Request: ${order.id}`,
-    `Item: ${order.item.replace("·", "-")}`,
-    `Merchant: ${order.merchant}`,
-    `Amount: ${order.amount} RLUSD`,
-    `Exception: per-purchase limit (${p.cardLimit} RLUSD) for this request only`,
-    "Uses: once",
-    `Expires: ${expiresAt}`,
-    `Nonce: ${nonce}`,
-  ].join("\n");
+  return canonicalAscii(
+    [
+      "NEXXEN OWNER APPROVAL - ONE EXCEPTION",
+      "Business: NEXXEN demo business",
+      `Agent: ${agent}`,
+      `Request: ${order.id}`,
+      `Item: ${order.item}`,
+      `Merchant: ${order.merchant}`,
+      `Amount: ${order.amount} RLUSD`,
+      `Exception: per-purchase limit (${p.cardLimit} RLUSD) for this request only`,
+      "Uses: once",
+      `Expires: ${expiresAt}`,
+      `Nonce: ${nonce}`,
+    ].join("\n"),
+  );
 }
 
 export function prepareApproval(orderId: string, agent: string) {
@@ -317,7 +337,7 @@ export function prepareApproval(orderId: string, agent: string) {
   return save(s);
 }
 
-export function submitApproval(approvalId: string, signature: string, via: "wallet" | "pasted") {
+export function submitApproval(approvalId: string, signature: string, via: "wallet" | "pasted" | "ledger") {
   const owner = policy().owner;
   if (!owner) throw new Error("OWNER_APPROVER_ADDRESS is not set, so no signature can be trusted.");
   if (!/^0x[0-9a-fA-F]{130}$/.test(signature)) throw new Error("Signature must be a 65-byte hex string.");

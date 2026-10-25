@@ -46,7 +46,7 @@ export type Approval = {
   expectedSigner: string | null;
   signer?: string;
   signature?: string;
-  via?: "wallet" | "pasted";
+  via?: "wallet" | "pasted" | "ledger";
   verifiedAt?: string;
   reservationId?: string;
 };
@@ -65,6 +65,8 @@ export type StoryData = {
     owner: string | null;
     ownerDevice: string;
     approvalTtlSeconds: number;
+    observedFirmware: string | null;
+    observedEthereumApp: string | null;
   };
   financing: { accepted: Quote | null; budget: string; used: string; remaining: string };
   items: readonly { id: string; name: string; merchant: string; amount: string; rail: "ap4m" | "card" }[];
