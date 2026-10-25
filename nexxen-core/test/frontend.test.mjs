@@ -39,7 +39,7 @@ test('non-browser frontend smoke: all six views and declined-cycle evidence rend
       assert.doesNotMatch(element('#view-content').innerHTML, /\bNaN\b|\bundefined\b/, `${view} has defined amounts`);
     }
     context.location.hash = '#cards'; vm.runInContext('render()', context);
-    assert.match(element('#view-content').innerHTML, /BLOCKED \/ UNPAID/);
+    assert.match(element('#view-content').innerHTML, /SDK VERIFIED PAYOUT/);
     assert.match(element('#view-content').innerHTML, /Not funded by the AP4M claim/);
     vm.runInContext("showCycleReceipt(state.cycles.find(c => c.scenario === 'gpu_failed'))", context);
     const receipt = element('#receipt-content').innerHTML;
