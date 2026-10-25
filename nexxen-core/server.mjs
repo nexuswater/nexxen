@@ -5,6 +5,7 @@ import { join,dirname } from 'node:path';
 import { PUBLIC_DEPLOYMENT_SNAPSHOT } from './adapters/ap4m-prepare.mjs';
 import { TermQuotes } from './lib/term-quotes.mjs';
 import { Approvals } from './lib/approvals.mjs';
+import { readAuthority } from './lib/approval-authority.mjs';
 import { Store,AppError,creditQuote } from './lib/store.mjs';
 const root=dirname(fileURLToPath(import.meta.url));mkdirSync(join(root,'data'),{recursive:true});
 // This local application intentionally cannot activate live transfers by environment flag.
@@ -13,7 +14,10 @@ const port=Number(process.env.PORT||3000),host=process.env.HOST||'127.0.0.1';
 if(!['127.0.0.1','localhost','::1'].includes(host))throw new Error('This unauthenticated local demo only permits loopback HOST (127.0.0.1, localhost, or ::1).');
 const store=new Store(process.env.NEXXEN_DB||join(root,'data','nexxen.sqlite'));
 
-const terms=new TermQuotes(store),approvals=new Approvals(store);
+// Remains false until this integration is independently reviewed and enabled.
+const signingUiReady=false;
+const enrolledAuthority=readAuthority(store);
+const terms=new TermQuotes(store),approvals=new Approvals(store,{authority:enrolledAuthority?.address??null,maximumMinor:2});
 const send=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
 const server=http.createServer(async(req,res)=>{try{
  res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'");
@@ -21,7 +25,7 @@ const server=http.createServer(async(req,res)=>{try{
  if(!['localhost','127.0.0.1','[::1]',host].includes(requestHost))throw new AppError('Unrecognized host.',403);
  const url=new URL(req.url,'http://localhost');
  if(req.method==='GET'&&url.pathname==='/api/ap4m-preparation')return send(res,200,{mode:'preparation-only',deployment:PUBLIC_DEPLOYMENT_SNAPSHOT,knownAgent:'0xe3D841aE3Acc8Dc79577092C141205f3d0Bf5183',portalEvidence:'20 RLUSD deposited by organizer; no chain receipt verified',merchantSelection:'pending',signingAllowed:false,broadcastAllowed:false,blockers:['Selected merchant ID and payout not yet verified','Authorized session and signer connection unavailable','Current channel, gas and treasury approval not verified'],operations:['prepareChannelRequest','prepareVoucher','prepareRedemptionCall']});
- if(req.method==='GET'&&url.pathname==='/api/state')return send(res,200,{...store.state(),termPolicy:terms.policy,termQuotes:terms.list(),approvalCapabilities:approvals.capabilities(),approvalChallenges:approvals.list()});
+ if(req.method==='GET'&&url.pathname==='/api/state')return send(res,200,{...store.state(),termPolicy:terms.policy,termQuotes:terms.list(),approvalCapabilities:{...approvals.capabilities(),signingAvailable:signingUiReady&&!!enrolledAuthority,observedFirmware:enrolledAuthority?.observedFirmware??null,observedEthereumApp:enrolledAuthority?.observedEthereumApp??null},approvalChallenges:approvals.list()});
  if(req.method==='POST'&&url.pathname.startsWith('/api/')){
   const origin=req.headers.origin;if(origin&&origin!==`http://${req.headers.host}`)throw new AppError('Cross-origin mutation rejected.',403);
   if(!req.headers['content-type']?.startsWith('application/json'))throw new AppError('JSON required.',415);
@@ -30,13 +34,15 @@ const server=http.createServer(async(req,res)=>{try{
   if(url.pathname==='/api/term-quotes/accept')return send(res,200,terms.accept(body));
   if(url.pathname==='/api/approvals/prepare')return send(res,200,approvals.prepare(body));
   if(url.pathname==='/api/approvals/deny')return send(res,200,approvals.deny(body));
-  if(url.pathname==='/api/approvals/submit')return send(res,200,approvals.submit(body));
+  if(url.pathname==='/api/approvals/submit'){if(!signingUiReady)throw new AppError('Signing UI is not enabled pending review.',409);return send(res,200,approvals.submit(body));}
   if(url.pathname==='/api/card-cycles')return send(res,200,store.cardCycle(body));
   if(url.pathname==='/api/orders')return send(res,200,store.purchase(body));
   if(url.pathname==='/api/policy')return send(res,200,store.updatePolicy(body));
   if(url.pathname==='/api/credit-quotes')return send(res,200,creditQuote(body.scenario));
   throw new AppError('Unsupported action. Treasury approval is unavailable.',404);
  }
+ const approvalFiles={'/approval':['index.html','text/html'],'/approval/approval.js':['dist/approval.js','text/javascript'],'/approval/style.css':['style.css','text/css']};
+ if(req.method==='GET'&&approvalFiles[url.pathname]){const [file,type]=approvalFiles[url.pathname];let bytes;try{bytes=readFileSync(join(root,'tools','ledger-approval',file));}catch{return send(res,503,{error:'Approval panel assets unavailable. Build the local bundle before use.'});}res.writeHead(200,{'Content-Type':type,'Cache-Control':'no-store','Permissions-Policy':'hid=(self)'});return res.end(bytes);}
  const files={'/':['index.html','text/html'],'/app.js':['app.js','text/javascript'],'/styles.css':['styles.css','text/css']};
  if(req.method==='GET'&&files[url.pathname]){const [file,type]=files[url.pathname];res.writeHead(200,{'Content-Type':type});return res.end(readFileSync(join(root,'public',file)));}throw new AppError('Not found.',404);
 }catch(e){send(res,e.status||500,{error:e.status?e.message:'Internal server error.'});}});

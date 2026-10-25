@@ -51,5 +51,5 @@ export class Approvals {
   });
  }
  list(){return this.store.db.prepare('SELECT * FROM approval_challenges ORDER BY rowid DESC LIMIT 50').all().map(r=>({...JSON.parse(r.value),status:r.status==='pending'&&JSON.parse(r.value).expiresAt<=Math.floor(this.store.now().getTime()/1000)?'expired':r.status,reservationId:r.reservation_id}));}
- capabilities(){return {configuredAuthority:this.authority,maximumMinor:this.maximumMinor,ttlSeconds:this.ttlSeconds,hardwareReady:false,signingAvailable:false,reason:'Business approver, Flex firmware and Ethereum app readiness are not confirmed. No hardware transport is activated.'};}
+ capabilities(){return {configuredAuthority:this.authority,maximumMinor:this.maximumMinor,ttlSeconds:this.ttlSeconds,hardwareReady:false,signingAvailable:false,reason:this.authority?'Trusted approver is enrolled for local fixture exceptions up to 0.02 RLUSD only. Browser signing integration is not activated.':'Trusted business approver is not enrolled. Signing remains unavailable.'};}
 }

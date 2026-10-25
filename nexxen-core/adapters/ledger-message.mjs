@@ -9,7 +9,7 @@ export function prepareLedgerMessageAction({signer,path,message,readiness}){
  if(typeof path!=='string'||!/^44'\/60'\/\d+'\/\d+\/\d+$/.test(path)||typeof signer?.signMessage!=='function')throw new Error('SUPPORTED_SIGNER_REQUIRED');
  let action,subscription,resolve,reject,finished=false;
  const result=new Promise((ok,no)=>{resolve=ok;reject=no;});
- function fail(reason){if(finished)return;finished=true;try{action?.cancel();}finally{subscription?.unsubscribe();reject(new Error(reason));}}
+ function fail(reason){if(finished)return;finished=true;try{action?.cancel();}catch{}finally{try{subscription?.unsubscribe();}catch{}reject(new Error(reason));}}
  function start(){if(action||finished)throw new Error('ACTION_ALREADY_STARTED');
   try{action=signer.signMessage(path,message);subscription=action.observable.subscribe({
    next:state=>{if(finished)return;if(state.status==='completed'){const s=state.output;if(!s||!/^0x[0-9a-fA-F]{64}$/.test(s.r)||!/^0x[0-9a-fA-F]{64}$/.test(s.s)||![0,1,27,28].includes(s.v)){fail('INVALID_SIGNATURE_OUTPUT');return;}finished=true;resolve({candidateSignature:s,verified:false,hardwareProven:false});subscription?.unsubscribe();}
