@@ -2,7 +2,7 @@
 
 This separate panel is served by the fixture dashboard at `/approval` (currently http://127.0.0.1:3001/approval). It does not change the independently published read-only readiness tool on port 3002.
 
-The server readiness constant remains **false pending independent review**. Both the signing coordinator and HTTP submission route reject when disabled. No physical message signature has been tested or requested. Do not change the flag merely because the bundle builds.
+The server defaults to **disabled**. Only an explicitly approved local authority record with `signingUiEnabled: true` enables this reviewed fixture UI. No HTTP enrollment or enablement endpoint exists. Both the signing coordinator and HTTP submission route reject when disabled. No physical message signature has been tested or requested.
 
 Build using `node tools/ledger-approval/build.mjs` after installing the pinned official dependencies in `tools/ledger-browser` with its lockfile and `npm ci --ignore-scripts`. The generated `dist/` is ignored. No additional SDK or runtime external service is required. CSP restricts network traffic to this local server.
 

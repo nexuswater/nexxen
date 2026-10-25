@@ -14,9 +14,9 @@ const port=Number(process.env.PORT||3000),host=process.env.HOST||'127.0.0.1';
 if(!['127.0.0.1','localhost','::1'].includes(host))throw new Error('This unauthenticated local demo only permits loopback HOST (127.0.0.1, localhost, or ::1).');
 const store=new Store(process.env.NEXXEN_DB||join(root,'data','nexxen.sqlite'));
 
-// Remains false until this integration is independently reviewed and enabled.
-const signingUiReady=false;
+// Disabled by default; enabled only by explicit local operator approval.
 const enrolledAuthority=readAuthority(store);
+const signingUiReady=enrolledAuthority?.signingUiEnabled===true;
 const terms=new TermQuotes(store),approvals=new Approvals(store,{authority:enrolledAuthority?.address??null,maximumMinor:2});
 const send=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
 const server=http.createServer(async(req,res)=>{try{
@@ -25,7 +25,7 @@ const server=http.createServer(async(req,res)=>{try{
  if(!['localhost','127.0.0.1','[::1]',host].includes(requestHost))throw new AppError('Unrecognized host.',403);
  const url=new URL(req.url,'http://localhost');
  if(req.method==='GET'&&url.pathname==='/api/ap4m-preparation')return send(res,200,{mode:'preparation-only',deployment:PUBLIC_DEPLOYMENT_SNAPSHOT,knownAgent:'0xe3D841aE3Acc8Dc79577092C141205f3d0Bf5183',portalEvidence:'20 RLUSD deposited by organizer; no chain receipt verified',merchantSelection:'pending',signingAllowed:false,broadcastAllowed:false,blockers:['Selected merchant ID and payout not yet verified','Authorized session and signer connection unavailable','Current channel, gas and treasury approval not verified'],operations:['prepareChannelRequest','prepareVoucher','prepareRedemptionCall']});
- if(req.method==='GET'&&url.pathname==='/api/state')return send(res,200,{...store.state(),termPolicy:terms.policy,termQuotes:terms.list(),approvalCapabilities:{...approvals.capabilities(),signingAvailable:signingUiReady&&!!enrolledAuthority,observedFirmware:enrolledAuthority?.observedFirmware??null,observedEthereumApp:enrolledAuthority?.observedEthereumApp??null},approvalChallenges:approvals.list()});
+ if(req.method==='GET'&&url.pathname==='/api/state')return send(res,200,{...store.state(),termPolicy:terms.policy,termQuotes:terms.list(),approvalCapabilities:{...approvals.capabilities(),signingAvailable:signingUiReady&&!!enrolledAuthority,reason:signingUiReady?'Local fixture message approval enabled; each request still requires explicit user device review.':approvals.capabilities().reason,observedFirmware:enrolledAuthority?.observedFirmware??null,observedEthereumApp:enrolledAuthority?.observedEthereumApp??null},approvalChallenges:approvals.list()});
  if(req.method==='POST'&&url.pathname.startsWith('/api/')){
   const origin=req.headers.origin;if(origin&&origin!==`http://${req.headers.host}`)throw new AppError('Cross-origin mutation rejected.',403);
   if(!req.headers['content-type']?.startsWith('application/json'))throw new AppError('JSON required.',415);
