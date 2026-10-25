@@ -27,6 +27,7 @@ export function rpcTransport({fetchImpl=fetch,signal,timeoutMs=15000}={}){
    const response=await fetchImpl(request.url,{method:request.method,headers:request.headers,body:request.body,redirect:'error',credentials:'omit',signal:signal?AbortSignal.any([signal,AbortSignal.timeout(timeoutMs)]):AbortSignal.timeout(timeoutMs)});
    const data=new Uint8Array(await response.arrayBuffer());
    if(data.byteLength>5_000_000)throw Error('RPC_UNAVAILABLE');
+   if(response.status===413){let body;try{body=JSON.parse(new TextDecoder().decode(data));}catch{}if(body?.error?.code===-32615){return {statusCode:200,statusMessage:'RPC range limit',headers:{'content-type':'application/json'},body:new TextEncoder().encode(JSON.stringify({jsonrpc:'2.0',id:body.id,error:{code:-32615,message:'QUICKNODE_LOG_RANGE_LIMIT'}}))};}}
    return {statusCode:response.status,statusMessage:response.statusText,headers:Object.fromEntries(response.headers),body:data};
   }catch(error){throw Error(error?.name==='TimeoutError'?'RPC_TIMEOUT':'RPC_UNAVAILABLE');}
  };
