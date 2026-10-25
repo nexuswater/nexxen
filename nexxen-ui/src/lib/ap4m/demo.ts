@@ -1,7 +1,9 @@
 import { randomBytes } from "node:crypto";
 import { ethers } from "ethers";
 import { contentFor } from "./content.mjs";
+import { blockApprover } from "./verev";
 import {
+  addEvent,
   checkChannelCap,
   checkPolicy,
   env,
@@ -97,18 +99,37 @@ export async function buyService(serviceId: string): Promise<Purchase> {
   if (!service) throw new Error(`Unknown service ${serviceId}`);
   // 1. The seller's 402 challenge: a fixed price for this resource.
   const price = service.priceRlusd;
-  checkPolicy(price, service.seller);
+  addEvent({ mode: "demo", kind: "402", text: `${service.seller} quotes ${price} RLUSD per call (simulated)` });
+  try {
+    checkPolicy(price, service.seller);
+  } catch (error) {
+    addEvent({ mode: "demo", kind: "DECLINE", decision: "DECLINE", text: `POLICY DECLINE · ${(error as Error).message}` });
+    throw error;
+  }
 
-  // 2. A Channel with room, or a new one within policy.
+  // 2. A Channel inside an approved spending block, or a new block.
   const priceWei = ethers.parseUnits(price, 18);
   let j = readJournal();
   let channel = j.demoChannels.find(
     (c) => c.channel_status === "open" && ethers.parseUnits(c.cap, 18) - ethers.parseUnits(c.redeemed, 18) >= priceWei,
   );
   if (!channel) {
-    openChannel(env().maxChannelCap);
+    const b = balance();
+    const d = await blockApprover.approveBlock({
+      agent: wallet().address,
+      blockRlusd: env().blockSize,
+      availableRlusd: b.availableRlusd,
+      spentRlusd: b.spentRlusd,
+    });
+    if (d.decision !== "APPROVE") {
+      addEvent({ mode: "demo", kind: "DECLINE", decision: d.decision, text: `${d.decidedBy} ${d.decision} · ${d.reason}` });
+      throw new Error(`${d.decidedBy} ${d.decision === "ASK_OWNER" ? "needs the owner's approval" : "declined"}: ${d.reason}`);
+    }
+    addEvent({ mode: "demo", kind: d.decidedBy, decision: "APPROVE", text: `APPROVE · ${env().blockSize} RLUSD block · ${d.reason}` });
+    openChannel(env().blockSize);
     j = readJournal();
     channel = j.demoChannels[0];
+    j.blocks.unshift({ at: new Date().toISOString(), mode: "demo", channelId: channel.channel_id, amountRlusd: env().blockSize, decidedBy: d.decidedBy });
   }
 
   // 3. Sign the cumulative Voucher; the seller verifies it before delivering.
@@ -135,6 +156,8 @@ export async function buyService(serviceId: string): Promise<Purchase> {
   };
   j.purchases.unshift(entry);
   writeJournal(j);
+  addEvent({ mode: "demo", kind: "VOUCHER", text: `EIP-712 signed · ${price} RLUSD (simulated channel)` });
+  addEvent({ mode: "demo", kind: "SETTLED", text: `Redeemed (simulated) · ${service.seller}`, txHash: entry.txHash, explorerUrl: null });
   return entry;
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { HomeLink } from "@/components/home-link";
+import { ActivityPanel } from "@/components/activity-panel";
 import { NetworkPage } from "@/components/network-page";
 import { StorePage, StoreWelcome } from "@/components/service-store";
 import { WalletHeader } from "@/components/wallet-bar";
@@ -79,6 +80,7 @@ export default function AgentApp() {
         <NetworkPage />
       </AgentInterface.Route>
     </AgentInterface>
+        <ActivityPanel />
       </div>
     </div>
   );

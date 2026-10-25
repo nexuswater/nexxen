@@ -12,6 +12,8 @@ export const env = () => ({
   agentKey: process.env.AGENT_PRIVATE_KEY ?? "",
   maxChannelCap: process.env.AP4M_MAX_CHANNEL_CAP || "2",
   maxPrice: process.env.AP4M_MAX_PRICE || "1",
+  /** Size of one VEREV-approved spending block (= the cap of the Channel it funds). */
+  blockSize: process.env.AP4M_BLOCK_RLUSD || process.env.AP4M_MAX_CHANNEL_CAP || "0.1",
   stateDir: process.env.AP4M_STATE_DIR || ".ap4m",
   city: process.env.NEXXEN_CITY || "Bengaluru",
 });
@@ -48,7 +50,36 @@ export type Settlement = {
 
 export type DemoChannel = { channel_id: string; channel_status: "open" | "closed"; cap: string; redeemed: string };
 
-export type Journal = { purchases: Purchase[]; settlements: Settlement[]; demoChannels: DemoChannel[] };
+/** One line of the live feed. Kinds follow the team's flow vocabulary. */
+export type FeedEvent = {
+  at: string;
+  mode: Mode;
+  kind: "402" | "VEREV" | "POLICY" | "VOUCHER" | "SETTLED" | "PAYOUT" | "DECLINE" | "ERROR";
+  text: string;
+  /** VEREV/policy outcome for decision lines. */
+  decision?: "APPROVE" | "ASK_OWNER" | "DECLINE";
+  code?: number;
+  txHash?: string;
+  explorerUrl?: string | null;
+};
+
+/** A spending block: one decision covers one Channel, whose on-chain cap enforces it. */
+export type Block = {
+  at: string;
+  mode: Mode;
+  channelId: string;
+  amountRlusd: string;
+  decidedBy: "VEREV" | "POLICY";
+  ref?: string;
+};
+
+export type Journal = {
+  purchases: Purchase[];
+  settlements: Settlement[];
+  demoChannels: DemoChannel[];
+  events: FeedEvent[];
+  blocks: Block[];
+};
 
 function journalFile() {
   mkdirSync(env().stateDir, { recursive: true, mode: 0o700 });
@@ -58,9 +89,9 @@ function journalFile() {
 export function readJournal(): Journal {
   try {
     const j = JSON.parse(readFileSync(journalFile(), "utf8"));
-    return { purchases: [], settlements: [], demoChannels: [], ...j };
+    return { purchases: [], settlements: [], demoChannels: [], events: [], blocks: [], ...j };
   } catch {
-    return { purchases: [], settlements: [], demoChannels: [] };
+    return { purchases: [], settlements: [], demoChannels: [], events: [], blocks: [] };
   }
 }
 
@@ -75,6 +106,13 @@ export function attachJob(claimId: string, job: NonNullable<Purchase["job"]>) {
     p.job = job;
     writeJournal(j);
   }
+}
+
+export function addEvent(event: Omit<FeedEvent, "at">) {
+  const j = readJournal();
+  j.events.unshift({ at: new Date().toISOString(), ...event });
+  j.events = j.events.slice(0, 500);
+  writeJournal(j);
 }
 
 export const rlusd = (wei: bigint | string) => ethers.formatUnits(wei, 18);

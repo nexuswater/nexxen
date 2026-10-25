@@ -4,7 +4,9 @@ import { ethers } from "ethers";
 import * as demo from "./demo";
 import sdk from "./kit/ap4m-hackathon-sdk.cjs";
 import { buyResource, loadX402Context } from "./kit/ap4m-x402.mjs";
+import { blockApprover } from "./verev";
 import {
+  addEvent,
   checkChannelCap,
   checkPolicy,
   env,
@@ -190,17 +192,80 @@ async function liveOpenChannel(capRlusd: string) {
  * Buy one service over x402: read the Merchant's 402, check it against the
  * policy, sign the Voucher, let the Merchant redeem it on-chain, report it.
  */
+/** An open Channel funded by an approved spending block, with room for `minimumRlusd`. */
+async function blockChannelWithRoom(minimumRlusd: string) {
+  const approved = new Set(readJournal().blocks.filter((b) => b.mode === "live").map((b) => b.channelId));
+  if (!approved.size) return null;
+  const { provider, c } = await chain();
+  const channels = (await sdk.listChannels(env().apiUrl, await token())) as Channel[];
+  for (const ch of channels.filter((x) => x.channel_status === "open" && approved.has(x.channel_id))) {
+    const st = await sdk.getChannelState(provider, c.contracts.paymentLedger, ch.channel_id);
+    if (st.cap - st.redeemed >= ethers.parseUnits(minimumRlusd, 18)) return ch.channel_id;
+  }
+  return null;
+}
+
+/**
+ * Ask for a new spending block (VEREV, or the owner's policy until VEREV is
+ * wired) and fund it as a Channel capped at the block size.
+ */
+async function openApprovedBlock(wallet: string) {
+  const blockRlusd = env().blockSize;
+  const bal = await liveBalance();
+  const d = await blockApprover.approveBlock({
+    agent: wallet,
+    blockRlusd,
+    availableRlusd: bal.availableRlusd,
+    spentRlusd: bal.spentRlusd,
+  });
+  const label = d.decidedBy;
+  if (d.decision !== "APPROVE") {
+    addEvent({
+      mode: "live",
+      kind: "DECLINE",
+      decision: d.decision,
+      code: d.code,
+      text: `${label} ${d.decision === "ASK_OWNER" ? "ASK OWNER" : "DECLINE"} · ${blockRlusd} RLUSD block · ${d.reason}`,
+    });
+    throw new Error(
+      d.decision === "ASK_OWNER"
+        ? `${label} needs the owner's approval for a ${blockRlusd} RLUSD block (${d.reason})`
+        : `${label} declined a ${blockRlusd} RLUSD block (${d.reason})`,
+    );
+  }
+  addEvent({ mode: "live", kind: label, decision: "APPROVE", text: `APPROVE · ${blockRlusd} RLUSD block · ${d.reason}` });
+  const ch = await liveOpenChannel(blockRlusd);
+  const j = readJournal();
+  j.blocks.unshift({ at: new Date().toISOString(), mode: "live", channelId: ch.channelId, amountRlusd: blockRlusd, decidedBy: label, ref: d.ref });
+  writeJournal(j);
+  addEvent({ mode: "live", kind: "VOUCHER", text: `Channel opened · ${blockRlusd} RLUSD cap · ${short(ch.channelId)}` });
+  return ch.channelId;
+}
+
+const short = (hex: string) => `${hex.slice(0, 6)}…${hex.slice(-4)}`;
+
+/**
+ * Buy one service over x402 inside an approved spending block: read the
+ * Merchant's 402, check the price policy, sign the cumulative Voucher, let the
+ * Merchant redeem it on-chain, report it. One block decision per Channel.
+ */
 async function liveBuy(serviceId: string): Promise<Purchase> {
   const service = services.find((s) => s.id === serviceId);
   if (!service) throw new Error(`Unknown service ${serviceId}`);
   const { provider, wallet, c } = await chain();
 
-  let channelId = await openChannelWithRoom(service.priceRlusd);
-  if (!channelId) channelId = (await liveOpenChannel(env().maxChannelCap)).channelId;
+  let channelId = await blockChannelWithRoom(service.priceRlusd);
+  if (!channelId) channelId = await openApprovedBlock(wallet.address);
 
   const q = await quote(service, channelId);
   if (!q.available) throw new Error(`${service.seller} is unavailable: ${q.reason}`);
-  checkPolicy(q.priceRlusd!, service.seller);
+  addEvent({ mode: "live", kind: "402", text: `${service.seller} quotes ${q.priceRlusd} RLUSD per call` });
+  try {
+    checkPolicy(q.priceRlusd!, service.seller);
+  } catch (error) {
+    addEvent({ mode: "live", kind: "DECLINE", decision: "DECLINE", text: `POLICY DECLINE · ${(error as Error).message}` });
+    throw error;
+  }
 
   state.context ??= await loadX402Context(env().apiUrl);
   const purchase = await buyResource({
@@ -212,6 +277,15 @@ async function liveBuy(serviceId: string): Promise<Purchase> {
     channelId,
     maximumAmount: ethers.parseUnits(env().maxPrice, 18).toString(),
     operation: `${service.id}-${Date.now()}`,
+  });
+  const explorerUrl = `${c.network.explorerUrl}/tx/${purchase.transactionHash}`;
+  addEvent({ mode: "live", kind: "VOUCHER", text: `EIP-712 signed · ${q.priceRlusd} RLUSD · channel ${short(channelId)}` });
+  addEvent({
+    mode: "live",
+    kind: "SETTLED",
+    text: `VoucherRedeemed · ${service.seller} · tx ${short(purchase.transactionHash)}`,
+    txHash: purchase.transactionHash,
+    explorerUrl,
   });
 
   const record = await fetch(`${env().apiUrl}/public/participant/record-redemption`, {
@@ -231,7 +305,7 @@ async function liveBuy(serviceId: string): Promise<Purchase> {
     channelId,
     claimId: purchase.claimId,
     txHash: purchase.transactionHash,
-    explorerUrl: `${c.network.explorerUrl}/tx/${purchase.transactionHash}`,
+    explorerUrl,
     resource: purchase.resource,
   };
   const j = readJournal();
@@ -250,6 +324,13 @@ async function liveSettle() {
   const results: Settlement[] = [];
   for (const channelId of channelIds) {
     const s = await sdk.settle(env().apiUrl, await token(), channelId);
+    addEvent({
+      mode: "live",
+      kind: "PAYOUT",
+      text: `RLUSD paid to seller · ${s.amount_rlusd} RLUSD · tx ${short(s.payout_tx)}`,
+      txHash: s.payout_tx,
+      explorerUrl: `${c.network.explorerUrl}/tx/${s.payout_tx}`,
+    });
     results.push({
       mode: "live",
       at: new Date().toISOString(),

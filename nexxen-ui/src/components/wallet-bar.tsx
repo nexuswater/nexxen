@@ -13,9 +13,35 @@ type HistoryItem = {
   ok?: boolean;
 };
 
-type WalletData = {
+export type FeedEvent = {
+  at: string;
+  kind: "402" | "VEREV" | "POLICY" | "VOUCHER" | "SETTLED" | "PAYOUT" | "DECLINE" | "ERROR";
+  text: string;
+  decision?: "APPROVE" | "ASK_OWNER" | "DECLINE";
+  code?: number;
+  txHash?: string;
+  explorerUrl?: string | null;
+};
+
+export type Report = {
+  score: number | null;
+  fundedLimitRlusd: string;
+  settledPayments: number;
+  settledRlusd: string;
+  withinBudget: number;
+  declines: number;
+  blocksApproved: number;
+  blockDecider: "VEREV" | "POLICY";
+  paidOutToSellers: number;
+  lastTx: string | null;
+  lastTxUrl: string | null;
+};
+
+export type WalletData = {
   wallet: { mode: "live" | "demo"; address: string; xrp: string | null; explorerUrl: string | null };
   balance: { budgetRlusd: string; spentRlusd: string; availableRlusd: string };
+  report: Report;
+  events: FeedEvent[];
   history: HistoryItem[];
   error?: string;
 };
@@ -31,32 +57,49 @@ function ago(iso: string) {
   return `${Math.round(s / 86400)}d ago`;
 }
 
-/** Polls the agent wallet: address, XRP gas, RLUSD budget and purchase history. */
-function useWallet() {
-  const [data, setData] = useState<WalletData | null>(null);
+// One poller shared by every component that shows wallet data.
+type Listener = (d: WalletData) => void;
+const listeners = new Set<Listener>();
+let latest: WalletData | null = null;
+let timer: ReturnType<typeof setInterval> | null = null;
+
+function poll() {
+  fetch("/api/wallet", { cache: "no-store" })
+    .then((r) => r.json())
+    .then((json: WalletData) => {
+      if (json.error) return;
+      latest = json;
+      listeners.forEach((l) => l(json));
+    })
+    .catch(() => {});
+}
+
+/** Polls the agent wallet: address, XRP gas, RLUSD budget, history, feed and report. */
+export function useWallet() {
+  const [data, setData] = useState<WalletData | null>(latest);
   const [delta, setDelta] = useState<{ rlusd: number; key: number } | null>(null);
-  const last = useRef<number | null>(null);
+  const last = useRef<number | null>(latest ? Number(latest.balance.availableRlusd) : null);
 
   useEffect(() => {
-    let alive = true;
-    const load = () =>
-      fetch("/api/wallet", { cache: "no-store" })
-        .then((r) => r.json())
-        .then((json: WalletData) => {
-          if (!alive || json.error) return;
-          const available = Number(json.balance.availableRlusd);
-          if (last.current !== null && available !== last.current) {
-            setDelta({ rlusd: available - last.current, key: Date.now() });
-          }
-          last.current = available;
-          setData(json);
-        })
-        .catch(() => {});
-    load();
-    const t = setInterval(load, 4000);
+    const onData: Listener = (json) => {
+      const available = Number(json.balance.availableRlusd);
+      if (last.current !== null && available !== last.current) {
+        setDelta({ rlusd: available - last.current, key: Date.now() });
+      }
+      last.current = available;
+      setData(json);
+    };
+    listeners.add(onData);
+    if (!timer) {
+      poll();
+      timer = setInterval(poll, 3000);
+    }
     return () => {
-      alive = false;
-      clearInterval(t);
+      listeners.delete(onData);
+      if (!listeners.size && timer) {
+        clearInterval(timer);
+        timer = null;
+      }
     };
   }, []);
 
