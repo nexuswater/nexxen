@@ -1,0 +1,11 @@
+# Isolated Ledger readiness
+
+This separate browser module reads firmware/app versions and requests a public Ethereum address with `checkOnDevice: true`. It has no signing action, authority enrollment, payment API or connection to the fixture approval server. An observed address is never trusted as business authority. The derivation path is explicitly the first Ethereum account, not an assertion about which existing account Josh owns.
+
+Install with `npm ci --ignore-scripts --no-audit --no-fund`, then `npm run build` and `node serve.mjs`. Open http://127.0.0.1:3002 in Chrome. The server binds loopback and serves only three exact static paths. CSP blocks all outbound connections. Bundled SDK code may contain signing capabilities, but this page invokes only discovery, connection, version commands and address display. No secrets or credentials are required. Dependencies and build output are isolated; generated `dist/` and `node_modules/` are ignored.
+
+Close Ledger Live, unlock the Flex on its dashboard, click Connect Ledger, and select the device in Chrome's chooser. This explicitly grants that origin WebHID access. Click Read firmware; then manually open Ethereum and click Read current app. Only then request Verify public address on device and inspect the address on the Flex. Do not enter a recovery phrase. Cancel/disconnect leaves all spending blocked. Browser USB permission may remain until revoked in Chrome site settings; the page stores no address or authority.
+
+Versions are pinned to DMK 1.11.0, WebHID 1.2.4, Ethereum signer 1.18.2, context module 2.7.0 and RxJS 7.8.2. The module builds with esbuild 0.25.12. Package declarations were checked against the installed pinned APIs. Device firmware and app versions are unknown until physical reads; compatibility, address display and disconnect behavior remain physically untested. No device action was initiated during preparation. The version read is not a device authenticity attestation.
+
+This module is deliberately separate from the reviewed 145-test terms/approval checkpoint. Actual approval signing still requires an explicitly verified business authority binding, readiness review and separate authorized hardware test. No browser-supplied address may establish that binding.
