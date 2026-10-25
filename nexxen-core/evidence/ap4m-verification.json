@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-25T00:42:07Z",
+  "verification": "canonical-ap4m-payout",
+  "sdkVersion": "0.10.1",
+  "ethersVersion": "6.17.0",
+  "chainId": 1449000,
+  "claimId": "0x2f742af45bca038820ae8787b6802035e64c1ede840e427d24f886e5902c2d2f",
+  "channelId": "0xf7b6ba9131acea68430fe757d40dbbd9a6650f90ecebc4ad8ddf71a005104a6e",
+  "payout": "0xC46D99FAaE8482F3876f49cAE56B9F09057CE2B8",
+  "amountBaseUnits": "1000000000000000",
+  "settlementDigest": "0x8c45090226543bc2cfe75f7c5ad18b65b8e25e2d3446d91a81b0d4e839461985",
+  "payoutTransaction": "0x28edd574a9b2c8edf02d44e65c9c29dcae1af1033cb7e5d358d714e1a6cd87d0",
+  "settlementTransaction": "0xbc5592171366f053f028661a1480bc9711e49704a1d78aa0a6e9d830d3b6feb5",
+  "payoutFinal": true,
+  "settlementFinal": true,
+  "readOnly": true,
+  "sandboxFundingPerformed": false,
+  "receiptUrl": "https://hackathon.ap4m.build/public/evidence/claims/0x2f742af45bca038820ae8787b6802035e64c1ede840e427d24f886e5902c2d2f/0x8c45090226543bc2cfe75f7c5ad18b65b8e25e2d3446d91a81b0d4e839461985.json"
+}

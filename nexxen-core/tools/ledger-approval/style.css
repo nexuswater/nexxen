@@ -1,0 +1,2 @@
+body{background:#101b29;color:#ecf3f8;font:17px/1.6 system-ui;margin:0}main{max-width:850px;margin:48px auto;padding:24px}h1{line-height:1.2}button{padding:12px;margin:6px;border:1px solid #72d4c1;border-radius:8px;background:#183c42;color:white;font:inherit}button:disabled{opacity:.4}#status{background:#203147;padding:20px}dd{overflow-wrap:anywhere}dt{color:#91d7ca}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#203147;padding:20px;font-size:13px}label{display:block;margin:18px 0}select{display:block;max-width:100%;padding:10px}#sign{background:#205a40}

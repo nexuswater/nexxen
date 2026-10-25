@@ -1,11 +1,12 @@
+import { EVIDENCE_SNAPSHOT } from './evidence-snapshot.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 export const SERVICES = [
  {id:'inference',name:'Inference burst',description:'Run a focused AI workload · 1,000 inference tokens',price:200},
  {id:'compute',name:'Compute session',description:'Provision an isolated GPU compute session · 30 minutes',price:800},
  {id:'card_cloud',name:'NVIDIA GPU rental simulation',description:'Fictional GPU compute quote · no vendor integration',price:400,rail:'card_simulation',merchant:'Fictional GPU Cloud',purpose:'NVIDIA GPU compute rental — simulated quote'},
- {id:'funding_standin',name:'Card-funding provider stand-in',description:'AP4M fixture endpoint models an unverified card-funding leg only',price:450,internal:true},
- {id:'funding_large',name:'Large card-funding stand-in',description:'Large-spend review fixture',price:2550,internal:true},
+ {id:'funding_standin',name:'Card-funding provider stand-in',description:'AP4M fixture endpoint models an unverified card-funding leg only',price:1,internal:true,rehearsalLimit:1},
+ {id:'funding_large',name:'Large card-funding stand-in',description:'Large-spend review fixture',price:2,internal:true,rehearsalLimit:1},
  {id:'training',name:'Training sprint',description:'Dedicated model-training capacity · 2 hours',price:2500},
 ];
 // Startup PRAGMAs can return SQLITE_BUSY even before normal statement waiting applies.
@@ -53,7 +54,8 @@ export class Store {
   return this.tx(()=>{
    const old=this.db.prepare('SELECT * FROM orders WHERE key=?').get(idempotencyKey);if(old){if(old.service!==serviceId)throw new AppError('Idempotency key already belongs to a different request.',409);return this.decorate(old);}
    const policy=this.policy(),usage=this.usage(),balance=this.balance(service.rail==='card_simulation'?'card':'ap4m');let reason=null;
-   if(service.price>policy.perRequest)reason='Per-request mandate exceeded';
+   if(service.rehearsalLimit && service.price>service.rehearsalLimit)reason='Rehearsal per-request limit of 0.01 RLUSD exceeded; human review pending';
+   if(!reason&&service.price>policy.perRequest)reason='Per-request mandate exceeded';
    for(const k of ['daily','weekly','monthly','agentDaily'])if(!reason&&usage[k]+service.price>policy[k])reason=`${k} mandate exceeded`;
    if(!reason&&service.price>balance.available)reason=service.rail==='card_simulation'?'Card fixture budget exceeded':'Funded channel capacity exceeded';
    const o={id:randomUUID(),key:idempotencyKey,service:serviceId,amount:service.price,status:reason?'blocked':'reserved',created:this.now().toISOString(),reason};
@@ -73,7 +75,7 @@ export class Store {
   if(typeof idempotencyKey!=='string'||!/^[a-zA-Z0-9_-]{8,80}$/.test(idempotencyKey)||!['success','funding_failed','gpu_failed','high_spend'].includes(scenario))throw new AppError('Invalid cycle key or fixture scenario.');
   return this.tx(()=>{
    const prior=this.db.prepare('SELECT * FROM cycles WHERE key=?').get(idempotencyKey);if(prior){if(prior.scenario!==scenario)throw new AppError('Cycle key is already bound to another scenario.',409);return JSON.parse(prior.value);}
-   const c={id:randomUUID(),created:this.now().toISOString(),scenario,mode:'simulation',status:'requested',merchant:'Fictional GPU Cloud',category:'approved-compute',fundingProvider:'AP4M test-merchant stand-in; not Marqeta or an endorsed integration',rate:'1.00 USD per RLUSD — FIXTURE ONLY; not an executable conversion',quotedUsd:scenario==='high_spend'?2500:400,quotedFeeRlusd:50,rlusdFunding:0,feeRlusd:0,usdFunded:0,usdSpent:0,serviceIncome:0,borrowedPrincipal:0,evidence:[]};
+   const c={id:randomUUID(),created:this.now().toISOString(),scenario,mode:'simulation',status:'requested',merchant:'Fictional GPU Cloud',category:'approved-compute',fundingProvider:'Local handoff simulation; no external provider',rate:'No exchange rate. RLUSD source and USD fixture are independent illustrative units.',quotedUsd:1,quotedFeeRlusd:0,rlusdFunding:0,feeRlusd:0,usdFunded:0,usdSpent:0,serviceIncome:0,borrowedPrincipal:0,evidence:[]};
    // The funding obligation consumes the shared business budget exactly once.
    // Downstream charge consumes the funded USD subledger, not another RLUSD obligation.
    const order=this.reserve({serviceId:scenario==='high_spend'?'funding_large':'funding_standin',idempotencyKey:'cycle-'+idempotencyKey},{allowInternal:true});c.fundingOrderId=order.id;
@@ -83,14 +85,14 @@ export class Store {
     this.db.prepare("UPDATE orders SET status='cancelled_fixture',reason='Fixture funding failure; no funds moved' WHERE id=?").run(order.id);
     c.status='funding_failed_fixture';c.reason='Fixture funding leg failed; no USD card funding or GPU purchase';c.evidence=[{stage:'RLUSD funding stand-in',status:'failed fixture; reservation safely released'},{stage:'USD card funding / GPU purchase',status:'not attempted'}];
    }else{
-    this.settleFixture(order.id);c.rlusdFunding=order.amount;c.feeRlusd=50;c.usdFunded=c.quotedUsd;
-    c.evidence=[{stage:'Approved provider stand-in',status:'simulated RLUSD payment; not evidence Marqeta accepts RLUSD/AP4M'},{stage:'Conversion and prefunded card',status:'simulated USD funding at fixture rate/fee; no card issued'}];
+    this.settleFixture(order.id);c.rlusdFunding=order.amount;c.feeRlusd=0;c.usdFunded=c.quotedUsd;
+    c.evidence=[{stage:'Approved provider stand-in',status:'simulated RLUSD payment; not evidence Marqeta accepts RLUSD/AP4M'},{stage:'Simulated handoff and independent USD fixture',status:'independent USD fixture allocation; no conversion or card issued'}];
     if(scenario==='gpu_failed'){c.status='gpu_declined_fixture';c.reason='Fixture GPU charge declined; simulated USD stays available, funding is not undone';c.evidence.push({stage:'GPU merchant card charge',status:'declined fixture; cycle not successful'});}
     else{c.status='completed_fixture';c.usdSpent=c.quotedUsd;c.evidence.push({stage:'GPU merchant card charge',status:'completed fixture only; no vendor acceptance or resource provisioning'});}
    }
    this.db.prepare('INSERT INTO cycles VALUES (?,?,?,?)').run(c.id,idempotencyKey,scenario,JSON.stringify(c));this.audit('fixture.card-cycle',{cycleId:c.id,status:c.status});return c;
   });
  }
- state(){return {mode:'simulation',currency:'RLUSD',network:'XRPL EVM testnet · 1449000 (not connected)',policy:this.policy(),usage:this.usage(),boundaries:this.boundaries(),timezone:'UTC',weekStart:'Monday',balance:this.balance(),cardBalance:this.balance('card'),cycles:this.cycles(),cycleAccounting:this.cycleAccounting(),services:SERVICES.filter(s=>!s.internal),orders:this.db.prepare('SELECT * FROM orders ORDER BY created DESC,rowid DESC').all().map(o=>this.decorate(o)),reviews:this.db.prepare('SELECT * FROM reviews ORDER BY created DESC').all().map(r=>({...r,status:'pending',reason:'A supported Ledger treasury action and verified sponsor configuration are required. No device or transaction was invoked.'})),capabilities:[{name:'Atomic mandates & idempotency',status:'implemented',detail:'Durable local SQLite reservations; daily / weekly / monthly UTC.'},{name:'AP4M payment flow',status:'simulated',detail:'Fixture funds and evidence only. Team configuration pending.'},{name:'Ledger Flex treasury',status:'unavailable',detail:'No supported hardware transport or confirmed treasury action.'},{name:'RLUSD settlement',status:'simulated',detail:'No token transfers or on-chain transactions.'},{name:'Credit quotes',status:'simulated',detail:'Versioned fixture underwriting. No loan originated.'},{name:'Virtual-card route',status:'simulated',detail:'Separate card-network fixture; shared owner budget. No issuer authorization, PAN, card issuance or conversion.'},{name:'Lender allocation / bridge',status:'planned',detail:'Outside this demo; no deposits, yield or bridge.'}]};}
+ state(){return {evidenceSnapshot:EVIDENCE_SNAPSHOT,mode:'simulation',currency:'RLUSD',network:'XRPL EVM testnet · 1449000 (not connected)',policy:this.policy(),usage:this.usage(),boundaries:this.boundaries(),timezone:'UTC',weekStart:'Monday',balance:this.balance(),cardBalance:this.balance('card'),cycles:this.cycles(),cycleAccounting:this.cycleAccounting(),services:SERVICES.filter(s=>!s.internal),orders:this.db.prepare('SELECT * FROM orders ORDER BY created DESC,rowid DESC').all().map(o=>this.decorate(o)),reviews:this.db.prepare('SELECT * FROM reviews ORDER BY created DESC').all().map(r=>({...r,status:'pending',reason:'A supported Ledger treasury action and verified sponsor configuration are required. No device or transaction was invoked.'})),capabilities:[{name:'Atomic mandates & idempotency',status:'implemented',detail:'Durable local SQLite reservations; daily / weekly / monthly UTC.'},{name:'AP4M payment flow',status:'simulated',detail:'Fixture funds and evidence only. Team configuration pending.'},{name:'Ledger Flex treasury',status:'unavailable',detail:'No supported hardware transport or confirmed treasury action.'},{name:'RLUSD settlement',status:'simulated',detail:'No token transfers or on-chain transactions.'},{name:'Credit quotes',status:'simulated',detail:'Versioned fixture underwriting. No loan originated.'},{name:'Virtual-card route',status:'simulated',detail:'Separate card-network fixture; shared owner budget. No issuer authorization, PAN, card issuance or conversion.'},{name:'Lender allocation / bridge',status:'planned',detail:'Outside this demo; no deposits, yield or bridge.'}]};}
 }
 export function creditQuote(scenario){if(!['healthy','review'].includes(scenario))throw new AppError('Select a known fixture scenario.');return {mode:'simulated',disclaimer:'Simulated underwriting; no loan originated.',policyVersion:'fixture-rate-v1',fixtureVersion:'fixture-evidence-v1',scenario,outcome:scenario==='healthy'?'indicative_quote':'human_review',principal:10000,fee:scenario==='healthy'?250:null,repayment:scenario==='healthy'?10250:null,reasonCodes:scenario==='healthy'?['FIXTURE_CASHFLOW_SUFFICIENT','FIXTURE_EVIDENCE_CURRENT']:['FIXTURE_EVIDENCE_STALE','FIXTURE_COVERAGE_INSUFFICIENT']};}
