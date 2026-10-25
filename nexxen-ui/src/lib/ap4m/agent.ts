@@ -423,3 +423,40 @@ export function buyService(serviceId: string) {
 export async function settleAll() {
   return (await mode()).value === "live" ? liveSettle() : demo.settleAll();
 }
+
+/** One Channel in full: live on-chain state, AP4M service record, its approved block and the payments made in it. */
+export async function channelDetails(channelId: string) {
+  if (!/^0x[0-9a-fA-F]{64}$/.test(channelId)) throw new Error("Invalid channel ID");
+  const same = (x: string) => x.toLowerCase() === channelId.toLowerCase();
+  const j = readJournal();
+  const payments = j.purchases
+    .filter((p) => same(p.channelId))
+    .map((p) => ({ at: p.at, service: p.service, seller: p.seller, amountRlusd: p.amountRlusd, claimId: p.claimId, txHash: p.txHash, explorerUrl: p.explorerUrl }));
+  const approvedBlock = j.blocks.find((b) => same(b.channelId)) ?? null;
+  if ((await mode()).value !== "live") return { channelId, mode: "demo", approvedBlock, payments };
+
+  const { provider, c } = await chain();
+  const [s, listed] = await Promise.all([
+    sdk.getChannelState(provider, c.contracts.paymentLedger, channelId),
+    sdk.listChannels(env().apiUrl, await token()).then((chs) => chs.find((ch) => same(ch.channel_id))),
+  ]);
+  return {
+    channelId,
+    mode: "live",
+    network: c.network.name,
+    paymentLedger: c.contracts.paymentLedger,
+    paymentLedgerUrl: `${c.network.explorerUrl}/address/${c.contracts.paymentLedger}`,
+    onChain: {
+      capRlusd: rlusd(s.cap),
+      redeemedRlusd: rlusd(s.redeemed),
+      remainingRlusd: rlusd(s.cap - s.redeemed),
+      statusCode: s.status,
+      validBefore: new Date(Number(s.validBefore) * 1000).toISOString(),
+    },
+    ap4mService: listed
+      ? { status: listed.channel_status, payout: listed.payout, merchantId: listed.merchant_id, failure: listed.failure }
+      : null,
+    approvedBlock,
+    payments,
+  };
+}

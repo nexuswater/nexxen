@@ -14,6 +14,7 @@ import {
   vercelAIMessageFormat,
 } from "@openuidev/react-ui";
 import { openuiLibrary } from "@openuidev/react-ui/genui-lib";
+import Link from "next/link";
 
 const llm = fetchLLM({
   url: "/api/chat",
@@ -61,6 +62,9 @@ export default function AgentApp() {
           <AgentInterface.SidebarItem path="network" icon={<NetworkIcon />}>
             AP4M payments
           </AgentInterface.SidebarItem>
+          <Link href="/demo" className="nx-demo-link">
+            <span aria-hidden>▶</span> Hackathon demo
+          </Link>
         </div>
         <AgentInterface.SidebarContent>
           <AgentInterface.ThreadList />

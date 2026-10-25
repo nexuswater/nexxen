@@ -138,6 +138,8 @@ strong {
 .nx-checks .ok { color: #0a7d34; }
 .nx-checks .fail { color: #c4161c; }
 .nx-sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+.nx-demo-link { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 8px 10px; border-radius: 10px; font-size: 13px; font-weight: 600; text-decoration: none; color: #fff; background: linear-gradient(135deg, #eb001b, #f79e1b); }
+.nx-demo-link:hover { filter: brightness(1.08); }
 .nx-sidebar-footer { margin-top: auto; padding: 8px; }
 @media (max-width: 640px) { .nx-page { padding: 16px; } .nx-row { flex-wrap: wrap; } }
 .nx-boot { height: 100dvh; display: grid; place-items: center; font-size: 14px; color: #888; }

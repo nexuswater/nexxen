@@ -1,0 +1,79 @@
+{
+  "claimId": "0x2f742af45bca038820ae8787b6802035e64c1ede840e427d24f886e5902c2d2f",
+  "environmentManifestDigest": "0x0ebaddb9abe66502618e5665edd04135407e77a99284a7918bc2bd416815965d",
+  "payoutObservation": {
+    "confirmationBlocks": 1,
+    "finalityBlockHash": "0x697c6f500f3b8ffbf95d2c3a3710607122b93b49b0ee62c0571c05916690a0eb",
+    "finalityBlockNumber": 9225456,
+    "payoutBalanceAfter": "9409000000000000001",
+    "payoutBalanceBefore": "9408000000000000001",
+    "payoutBlockHash": "0x697c6f500f3b8ffbf95d2c3a3710607122b93b49b0ee62c0571c05916690a0eb",
+    "schemaId": "ap4m.local-vault-payout-observations.v1",
+    "transactionHash": "0x28edd574a9b2c8edf02d44e65c9c29dcae1af1033cb7e5d358d714e1a6cd87d0"
+  },
+  "schemaId": "ap4m.claim-receipt.v1",
+  "settlementBatchEvidence": {
+    "asset": "0x27b57a9D0b8d24EB97259c4E2279e45255e016f3",
+    "claims": [
+      {
+        "amount": "1000000000000000",
+        "claimId": "0x2f742af45bca038820ae8787b6802035e64c1ede840e427d24f886e5902c2d2f"
+      }
+    ],
+    "providerReference": "pooled-escrow-vault-v1:0x74106f76fa35b373dbf23abdd7730e46bb35f81dbd8a79a1a031489400096ec1",
+    "routeId": "hackathon",
+    "settledAt": 1792883756,
+    "totalAmount": "1000000000000000",
+    "venueId": "pooled-escrow-vault"
+  },
+  "settlementDigest": "0x8c45090226543bc2cfe75f7c5ad18b65b8e25e2d3446d91a81b0d4e839461985",
+  "settlementEvidence": {
+    "agentPspId": "0x0c4b348ab956f7857398d44662cf18c4df241fb8b4befcc8f0c304119e74fc0a",
+    "allocationId": "0xf6a280eca4ec4786a994b1a5429ad78cb304ab392dec3b17c415288012f2e459",
+    "amount": "1000000000000000",
+    "asset": "0x27b57a9D0b8d24EB97259c4E2279e45255e016f3",
+    "channelId": "0xf7b6ba9131acea68430fe757d40dbbd9a6650f90ecebc4ad8ddf71a005104a6e",
+    "claimId": "0x2f742af45bca038820ae8787b6802035e64c1ede840e427d24f886e5902c2d2f",
+    "context": {
+      "chainId": "1449000",
+      "ledger": "0xcAB42800A5ECF0D253Fa2581Bb3334B4DAEfaE91"
+    },
+    "merchantPspId": "0x54e87b1804dbdb7797f40df9a47552c932f4b929a4095ac3e1ede8663f1a7249",
+    "providerBatchDigest": "0x5d1f77528508ae670a3f4fda44b388cd15b749bf1a2b4529bd85bac00d29c64a",
+    "providerReference": "pooled-escrow-vault-v1:0x74106f76fa35b373dbf23abdd7730e46bb35f81dbd8a79a1a031489400096ec1",
+    "routeId": "hackathon",
+    "settledAt": 1792883756,
+    "status": "settled",
+    "venueId": "pooled-escrow-vault"
+  },
+  "settlementTransaction": {
+    "blockHash": "0x9c66dde33c83bdfe9ba43fb8fcd0d32fe0f6224879b956a5dea0dcd78772f918",
+    "blockNumber": 9225457,
+    "finalityBlockHash": "0x9c66dde33c83bdfe9ba43fb8fcd0d32fe0f6224879b956a5dea0dcd78772f918",
+    "finalityBlockNumber": 9225457,
+    "logIndex": 0,
+    "transactionHash": "0xbc5592171366f053f028661a1480bc9711e49704a1d78aa0a6e9d830d3b6feb5"
+  },
+  "vaultPayoutEvidence": {
+    "amount": "1000000000000000",
+    "blockHash": "0x697c6f500f3b8ffbf95d2c3a3710607122b93b49b0ee62c0571c05916690a0eb",
+    "blockNumber": 9225456,
+    "blockTimestamp": 1792883756,
+    "chainId": "1449000",
+    "channelId": "0xf7b6ba9131acea68430fe757d40dbbd9a6650f90ecebc4ad8ddf71a005104a6e",
+    "claimId": "0x2f742af45bca038820ae8787b6802035e64c1ede840e427d24f886e5902c2d2f",
+    "cumulativeDisbursed": "759000000000000000",
+    "environmentManifestDigest": "0x0ebaddb9abe66502618e5665edd04135407e77a99284a7918bc2bd416815965d",
+    "finalityBlockHash": "0x697c6f500f3b8ffbf95d2c3a3710607122b93b49b0ee62c0571c05916690a0eb",
+    "finalityBlockNumber": 9225456,
+    "logIndex": 1,
+    "observationSetDigest": "0xc0d09400743ed608c83d424cbf45ad9c33ab2b81b88a1a5095e9b3f492cb74d2",
+    "payout": "0xC46D99FAaE8482F3876f49cAE56B9F09057CE2B8",
+    "payoutId": "0xadc6ccfbfc1b34f059e28562ba605257e29dc35b05f783bb489012d6dd9b1ffa",
+    "schemaId": "ap4m.vault-payout-evidence.v1",
+    "token": "0x27b57a9D0b8d24EB97259c4E2279e45255e016f3",
+    "transactionHash": "0x28edd574a9b2c8edf02d44e65c9c29dcae1af1033cb7e5d358d714e1a6cd87d0",
+    "vault": "0x83DD9cD010eb46e96eceF8F7eB0a18f7845AaBC0",
+    "vaultConfigurationId": "0x9da206a6ad13739a526c90dee2cf62422efc0fd985e1f232af4d34f946855b4d"
+  }
+}

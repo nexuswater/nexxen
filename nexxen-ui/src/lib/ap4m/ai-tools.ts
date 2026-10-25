@@ -44,9 +44,22 @@ export function validateJob(serviceId: string, job: JobInput) {
   if (input.length > 8000) throw new Error("Input is too long (8000 characters max)");
 }
 
-async function ask(system: string, prompt: string) {
-  const { text } = await generateText({ model: sellerModel(), system, prompt, maxOutputTokens: 1200 });
+async function ask(system: string, prompt: string, maxOutputTokens = 1200) {
+  const { text } = await generateText({ model: sellerModel(), system, prompt, maxOutputTokens });
   return text.trim();
+}
+
+/** The seller's own illustration: one safe, self-contained SVG. */
+async function drawSvg(prompt: string) {
+  const reply = await ask(
+    "You are an illustrator. Reply with one self-contained SVG (viewBox 0 0 512 512, no scripts, no external " +
+      "references) that illustrates the user's prompt with simple shapes and gradients. Reply with the SVG only.",
+    prompt,
+    4000,
+  );
+  const svg = reply.match(/<svg[\s\S]*<\/svg>/i)?.[0];
+  if (!svg || /<script|on\w+=|href=["']?(?!#)/i.test(svg)) throw new Error("No usable SVG");
+  return svg;
 }
 
 function pageText(html: string) {
@@ -82,12 +95,30 @@ export async function runJob(serviceId: string, job: JobInput): Promise<Record<s
       return { language, original: input, translation };
     }
     case "generate-image": {
-      const seed = Math.floor(Math.random() * 1_000_000);
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(input)}?width=1024&height=1024&nologo=true&seed=${seed}`;
-      // Generate now so the image is ready (and cached) when the chat shows it.
-      const res = await fetch(url, { signal: AbortSignal.timeout(60_000) });
-      if (!res.ok) throw new Error(`Image generation failed (HTTP ${res.status})`);
-      return { prompt: input, image_url: url, size: "1024x1024" };
+      // The free image service is often overloaded (402/429/503), so the seller starts its own SVG
+      // drawing in parallel and uses it only if no photo arrives in time.
+      const drawing = drawSvg(input).catch((e: Error) => e);
+      let lastError = "";
+      for (const wait of [0, 1_500, 3_000]) {
+        if (wait) await new Promise((r) => setTimeout(r, wait));
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(input)}?width=512&height=512&seed=${Math.floor(Math.random() * 1_000_000)}`;
+        try {
+          // Generate now so the image is ready (and cached) when the UI shows it.
+          const res = await fetch(url, { signal: AbortSignal.timeout(20_000) });
+          if (res.ok) return { prompt: input, image_url: url, size: "512x512", renderer: "Rendered by Pollinations" };
+          lastError = `HTTP ${res.status}`;
+        } catch (e) {
+          lastError = (e as Error).name === "TimeoutError" ? "timed out" : (e as Error).message;
+        }
+      }
+      const svg = await drawing;
+      if (svg instanceof Error) throw new Error(`Image service unavailable (${lastError}) and the fallback failed`);
+      return {
+        prompt: input,
+        image_url: `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`,
+        size: "512x512",
+        renderer: `Drawn by the seller's model (image service ${lastError})`,
+      };
     }
     case "sentiment": {
       const raw = await ask(

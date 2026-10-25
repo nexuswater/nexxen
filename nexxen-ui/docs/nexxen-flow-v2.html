@@ -1,0 +1,231 @@
+<title>NEXXEN Flow v2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  /* Layout: the nexxen-flow.html poster style, as one left-to-right row of eight step cards in demo order, grouped into four phases. */
+  :root {
+    --bg0: #0a0f1f; --bg1: #121a36; --card: #151d36; --card-edge: #2a3557; --fg: #eef2ff; --muted: #9aa6c8;
+    --orange: #f79e1b; --green: #3ddc84; --blue: #7aa2ff; --amber: #f2c14e; --red: #ff6b7a; --sky: #6ec6ff;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif; --mono: "IBM Plex Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  html, body { margin: 0; min-height: 100%; }
+  body { background: radial-gradient(1200px 700px at 70% -10%, var(--bg1), var(--bg0) 70%) var(--bg0); color: var(--fg); font-family: var(--sans);
+    display: grid; place-items: center; box-sizing: border-box; padding-block: 24px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  figure { margin: 0; width: min(2030px, 100%); overflow-x: auto; }
+  svg { display: block; width: 100%; min-width: 1100px; height: auto; font-family: var(--sans); }
+  text { fill: var(--fg); font-size: 14px; }
+  .h1 { font-size: 34px; font-weight: 700; letter-spacing: -0.01em; }
+  .h2 { fill: var(--muted); font-size: 16px; }
+  .title { font-size: 18px; font-weight: 700; }
+  .actor { fill: var(--muted); font-size: 13px; }
+  .mono { font-family: var(--mono); font-size: 12px; fill: var(--muted); }
+  .phase { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; }
+  .status { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; }
+  .small { font-size: 13px; }
+  .sub { fill: var(--muted); font-size: 13px; }
+  .t-orange { fill: var(--orange); } .t-green { fill: var(--green); } .t-blue { fill: var(--blue); } .t-amber { fill: var(--amber); } .t-red { fill: var(--red); } .t-sky { fill: var(--sky); }
+  .card { fill: var(--card); stroke: var(--card-edge); stroke-width: 1; }
+  .card-g { fill: var(--card); stroke: var(--green); stroke-width: 1.3; }
+  .card-o { fill: var(--card); stroke: var(--orange); stroke-width: 1.3; }
+  .card-r { fill: var(--card); stroke: var(--red); stroke-width: 1.3; }
+  .card-a { fill: var(--card); stroke: var(--amber); stroke-width: 1.3; stroke-dasharray: 7 5; }
+  .icon { fill: #0c1226; stroke: var(--card-edge); stroke-width: 1; }
+  .badge { stroke: none; }
+  .arrow { stroke-width: 2.6; fill: none; }
+  .bracket { fill: none; stroke-width: 1.6; }
+  .chip { fill: rgba(255,255,255,0.05); stroke: var(--card-edge); stroke-width: 1; }
+  .ar-blue { fill: var(--blue); } .ar-orange { fill: var(--orange); } .ar-green { fill: var(--green); } .ar-red { fill: var(--red); }
+</style>
+
+<figure>
+<svg viewBox="0 0 2030 760" role="img" aria-label="NEXXEN demo flow, left to right. Setup: 1, the owner sets limits; 2, the agent borrows with demo financing that funds its Marqeta card. Small purchase: 3, the agent pays an AP4M seller 0.001 RLUSD with a signed voucher; 4, the payment is redeemed on XRPL EVM Testnet and Mastercard AP4M pays the seller. Big purchase: 5, a 3.50 RLUSD GPU rental on the card is blocked; 6, the owner signs that one request on a Ledger Flex; 7, NEXXEN reserves it and keeps the blocked record. Proof: 8, Quicknode and the AP4M SDK verify the settled payment on-chain.">
+  <defs>
+    <marker id="mb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><polygon points="0,0 10,5 0,10" class="ar-blue"/></marker>
+    <marker id="mo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><polygon points="0,0 10,5 0,10" class="ar-orange"/></marker>
+    <marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><polygon points="0,0 10,5 0,10" class="ar-green"/></marker>
+    <marker id="mr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><polygon points="0,0 10,5 0,10" class="ar-red"/></marker>
+  </defs>
+
+  <!-- Heading -->
+  <g transform="translate(50 24)">
+    <circle cx="16" cy="26" r="16" fill="#eb001b"/><circle cx="38" cy="26" r="16" fill="#f79e1b" fill-opacity="0.92"/>
+    <text x="70" y="37" class="h1">NEXXEN: agent spending, human control</text>
+    <text x="0" y="78" class="h2">Read left to right. Small purchases: the agent pays on its own over Mastercard AP4M. Big purchases: blocked until the owner signs on a Ledger Flex. Then Quicknode proves it settled.</text>
+  </g>
+
+  <!-- Phase brackets (cards at x = 50 + i*246, width 208) -->
+  <g>
+    <path d="M50 168 V156 H504 V168" class="bracket" stroke="#7aa2ff"/>
+    <text x="277" y="146" text-anchor="middle" class="phase t-blue">SETUP</text>
+    <path d="M542 168 V156 H996 V168" class="bracket" stroke="#f79e1b"/>
+    <text x="769" y="146" text-anchor="middle" class="phase t-orange">SMALL PURCHASE · AGENT PAYS ALONE</text>
+    <path d="M1034 168 V156 H1734 V168" class="bracket" stroke="#ff6b7a"/>
+    <text x="1384" y="146" text-anchor="middle" class="phase t-red">BIG PURCHASE · HUMAN APPROVES</text>
+    <path d="M1772 168 V156 H1980 V168" class="bracket" stroke="#3ddc84"/>
+    <text x="1876" y="146" text-anchor="middle" class="phase t-green">PROOF</text>
+  </g>
+
+  <!-- 1 You set limits -->
+  <g transform="translate(50 184)">
+    <rect width="208" height="420" rx="16" class="card"/>
+    <circle cx="26" cy="28" r="15" fill="#7aa2ff" class="badge"/><text x="26" y="33" text-anchor="middle" style="font-weight:700;fill:#0a0f1f">1</text>
+    <circle cx="104" cy="86" r="30" class="icon"/>
+    <g transform="translate(104 86)" fill="none" stroke="#eef2ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M-11 -2 L11 -2 L11 10 L-11 10 Z"/><path d="M-13 -2 L-10 -10 L10 -10 L13 -2"/><path d="M-3 10 L-3 3 L3 3 L3 10"/></g>
+    <text x="104" y="150" text-anchor="middle" class="title">You set limits</text>
+    <text x="104" y="172" text-anchor="middle" class="actor">Business owner</text>
+    <text x="104" y="214" text-anchor="middle">2.00 RLUSD</text>
+    <text x="104" y="234" text-anchor="middle" class="sub">per purchase</text>
+    <text x="104" y="264" text-anchor="middle">0.10 RLUSD</text>
+    <text x="104" y="284" text-anchor="middle" class="sub">per AP4M spending block</text>
+    <text x="104" y="314" text-anchor="middle" class="sub">Approval key: Ledger Flex</text>
+    <text x="104" y="370" text-anchor="middle" class="status t-green">REAL CONFIG</text>
+    <text x="104" y="394" text-anchor="middle" class="mono">NEXXEN policy</text>
+  </g>
+
+  <!-- 2 Agent borrows -->
+  <g transform="translate(296 184)">
+    <rect width="208" height="420" rx="16" class="card-a"/>
+    <circle cx="26" cy="28" r="15" fill="#7aa2ff" class="badge"/><text x="26" y="33" text-anchor="middle" style="font-weight:700;fill:#0a0f1f">2</text>
+    <circle cx="104" cy="86" r="30" class="icon"/>
+    <g transform="translate(104 86)"><rect x="-15" y="-10" width="30" height="20" rx="3" fill="none" stroke="#eef2ff" stroke-width="1.8"/><circle cx="3" cy="3" r="4.5" fill="#eb001b"/><circle cx="9" cy="3" r="4.5" fill="#f79e1b" fill-opacity="0.92"/></g>
+    <text x="104" y="150" text-anchor="middle" class="title">Agent borrows</text>
+    <text x="104" y="172" text-anchor="middle" class="actor">Demo financing</text>
+    <text x="104" y="214" text-anchor="middle">Amount + term</text>
+    <text x="104" y="234" text-anchor="middle" class="sub">in hours or days</text>
+    <text x="104" y="264" text-anchor="middle">12% a year</text>
+    <text x="104" y="284" text-anchor="middle" class="sub">repayment quote</text>
+    <text x="104" y="314" text-anchor="middle" class="sub">Funds the agent's card</text>
+    <text x="104" y="370" text-anchor="middle" class="status t-amber">DEMO, NOT A LOAN</text>
+    <text x="104" y="394" text-anchor="middle" class="mono">Marqeta virtual card</text>
+  </g>
+
+  <!-- 3 Small purchase -->
+  <g transform="translate(542 184)">
+    <rect width="208" height="420" rx="16" class="card-o"/>
+    <circle cx="26" cy="28" r="15" fill="#f79e1b" class="badge"/><text x="26" y="33" text-anchor="middle" style="font-weight:700;fill:#0a0f1f">3</text>
+    <circle cx="104" cy="86" r="30" class="icon"/>
+    <path transform="translate(104 86)" d="M0 -14 L3.4 -3.4 L14 0 L3.4 3.4 L0 14 L-3.4 3.4 L-14 0 L-3.4 -3.4 Z" fill="#f79e1b"/>
+    <text x="104" y="150" text-anchor="middle" class="title">Small purchase</text>
+    <text x="104" y="172" text-anchor="middle" class="actor">NEXXEN agent → seller</text>
+    <text x="104" y="214" text-anchor="middle">Seller replies 402</text>
+    <text x="104" y="234" text-anchor="middle" class="sub">0.001 RLUSD image render</text>
+    <text x="104" y="264" text-anchor="middle">Within the limit</text>
+    <text x="104" y="284" text-anchor="middle" class="sub">agent signs a voucher</text>
+    <text x="104" y="314" text-anchor="middle" class="sub">No human involved</text>
+    <text x="104" y="370" text-anchor="middle" class="status t-green">REAL · TESTNET</text>
+    <text x="104" y="394" text-anchor="middle" class="mono">Mastercard AP4M · x402</text>
+  </g>
+
+  <!-- 4 Paid on-chain -->
+  <g transform="translate(788 184)">
+    <rect width="208" height="420" rx="16" class="card-o"/>
+    <circle cx="26" cy="28" r="15" fill="#f79e1b" class="badge"/><text x="26" y="33" text-anchor="middle" style="font-weight:700;fill:#0a0f1f">4</text>
+    <circle cx="104" cy="86" r="30" class="icon"/>
+    <g transform="translate(104 86)" fill="none" stroke="#eef2ff" stroke-width="3.2" stroke-linecap="round"><path d="M-11 -10 C-4 -10 -4 0 0 0 C4 0 4 -10 11 -10"/><path d="M-11 10 C-4 10 -4 0 0 0 C4 0 4 10 11 10"/></g>
+    <text x="104" y="150" text-anchor="middle" class="title">Paid on-chain</text>
+    <text x="104" y="172" text-anchor="middle" class="actor">XRPL EVM Testnet</text>
+    <text x="104" y="214" text-anchor="middle">Voucher redeemed</text>
+    <text x="104" y="234" text-anchor="middle" class="sub">VoucherRedeemed event</text>
+    <text x="104" y="264" text-anchor="middle">AP4M pays RLUSD</text>
+    <text x="104" y="284" text-anchor="middle" class="sub">to the seller's wallet</text>
+    <text x="104" y="314" text-anchor="middle" class="sub">Seller delivers the image</text>
+    <text x="104" y="370" text-anchor="middle" class="status t-green">REAL · TESTNET</text>
+    <text x="104" y="394" text-anchor="middle" class="mono">AP4M settlement · RLUSD</text>
+  </g>
+
+  <!-- 5 Big purchase blocked -->
+  <g transform="translate(1034 184)">
+    <rect width="208" height="420" rx="16" class="card-r"/>
+    <circle cx="26" cy="28" r="15" fill="#ff6b7a" class="badge"/><text x="26" y="33" text-anchor="middle" style="font-weight:700;fill:#0a0f1f">5</text>
+    <circle cx="104" cy="86" r="30" class="icon"/>
+    <g transform="translate(104 86)" fill="none" stroke="#ff6b7a" stroke-width="2.6" stroke-linecap="round"><circle r="13"/><path d="M-9 9 L9 -9"/></g>
+    <text x="104" y="150" text-anchor="middle" class="title">Big purchase</text>
+    <text x="104" y="172" text-anchor="middle" class="actor">Agent's Marqeta card</text>
+    <text x="104" y="214" text-anchor="middle">A100 GPU, 2 hours</text>
+    <text x="104" y="234" text-anchor="middle" class="sub">3.50 RLUSD</text>
+    <text x="104" y="264" text-anchor="middle">Over the 2.00 limit</text>
+    <text x="104" y="284" text-anchor="middle" class="sub">blocked before any charge</text>
+    <text x="104" y="314" text-anchor="middle" class="sub">Owner is asked</text>
+    <text x="104" y="370" text-anchor="middle" class="status t-green">REAL POLICY CHECK</text>
+    <text x="104" y="394" text-anchor="middle" class="mono">NEXXEN policy</text>
+  </g>
+
+  <!-- 6 Owner approves -->
+  <g transform="translate(1280 184)">
+    <rect width="208" height="420" rx="16" class="card-g"/>
+    <circle cx="26" cy="28" r="15" fill="#ff6b7a" class="badge"/><text x="26" y="33" text-anchor="middle" style="font-weight:700;fill:#0a0f1f">6</text>
+    <circle cx="104" cy="86" r="30" class="icon"/>
+    <g transform="translate(104 86)" fill="none" stroke="#eef2ff" stroke-width="2" stroke-linejoin="round"><rect x="-10" y="-15" width="20" height="30" rx="3"/><rect x="-6" y="-10" width="12" height="13" rx="1" stroke="#3ddc84"/><circle cx="0" cy="9" r="1.8" fill="#eef2ff"/></g>
+    <text x="104" y="150" text-anchor="middle" class="title">Owner approves</text>
+    <text x="104" y="172" text-anchor="middle" class="actor">Ledger Flex</text>
+    <text x="104" y="214" text-anchor="middle">Device shows</text>
+    <text x="104" y="234" text-anchor="middle" class="sub">the exact request</text>
+    <text x="104" y="264" text-anchor="middle">Owner signs once</text>
+    <text x="104" y="284" text-anchor="middle" class="sub">valid for 5 minutes</text>
+    <text x="104" y="314" text-anchor="middle" class="sub">Only the owner's key counts</text>
+    <text x="104" y="370" text-anchor="middle" class="status t-green">REAL SIGNATURE</text>
+    <text x="104" y="394" text-anchor="middle" class="mono">Ledger Flex · EIP-191</text>
+  </g>
+
+  <!-- 7 Reserved -->
+  <g transform="translate(1526 184)">
+    <rect width="208" height="420" rx="16" class="card"/>
+    <circle cx="26" cy="28" r="15" fill="#ff6b7a" class="badge"/><text x="26" y="33" text-anchor="middle" style="font-weight:700;fill:#0a0f1f">7</text>
+    <circle cx="104" cy="86" r="30" class="icon"/>
+    <g transform="translate(104 86)" fill="none" stroke="#eef2ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M0 -14 L12 -9 L12 1 C12 8 6 12 0 14 C-6 12 -12 8 -12 1 L-12 -9 Z"/><path d="M-5 0 L-1 4 L6 -4" stroke="#3ddc84"/></g>
+    <text x="104" y="150" text-anchor="middle" class="title">Reserved</text>
+    <text x="104" y="172" text-anchor="middle" class="actor">Approvals &amp; audit</text>
+    <text x="104" y="214" text-anchor="middle">Purchase reserved</text>
+    <text x="104" y="234" text-anchor="middle" class="sub">blocked record kept</text>
+    <text x="104" y="264" text-anchor="middle">Card pays CloudGPU</text>
+    <text x="104" y="284" text-anchor="middle" class="sub">fictional GPU merchant</text>
+    <text x="104" y="314" text-anchor="middle" class="sub">Same signature can't reuse</text>
+    <text x="104" y="370" text-anchor="middle" class="status t-amber">CARD CHARGE SIMULATED</text>
+    <text x="104" y="394" text-anchor="middle" class="mono">Audit log · Marqeta</text>
+  </g>
+
+  <!-- 8 Proof -->
+  <g transform="translate(1772 184)">
+    <rect width="208" height="420" rx="16" class="card-g"/>
+    <circle cx="26" cy="28" r="15" fill="#3ddc84" class="badge"/><text x="26" y="33" text-anchor="middle" style="font-weight:700;fill:#0a0f1f">8</text>
+    <circle cx="104" cy="86" r="30" class="icon"/>
+    <g transform="translate(104 86)" fill="none" stroke="#3ddc84" stroke-width="2.6" stroke-linecap="round"><circle cx="-2" cy="-2" r="10"/><path d="M5 5 L13 13"/></g>
+    <text x="104" y="150" text-anchor="middle" class="title">Proof</text>
+    <text x="104" y="172" text-anchor="middle" class="actor">Quicknode</text>
+    <text x="104" y="214" text-anchor="middle">AP4M SDK re-checks</text>
+    <text x="104" y="234" text-anchor="middle" class="sub">the settled payment</text>
+    <text x="104" y="264" text-anchor="middle">Exact RLUSD transfer</text>
+    <text x="104" y="284" text-anchor="middle" class="sub">payout + settlement final</text>
+    <text x="104" y="314" text-anchor="middle" class="sub">Read-only, no keys</text>
+    <text x="104" y="370" text-anchor="middle" class="status t-green">VERIFIED ON-CHAIN</text>
+    <text x="104" y="394" text-anchor="middle" class="mono">Quicknode · AP4M SDK</text>
+  </g>
+
+  <!-- Arrows, all left to right, at card mid-height (y = 394) -->
+  <line x1="262" y1="394" x2="292" y2="394" class="arrow" stroke="#7aa2ff" marker-end="url(#mb)"/>
+  <line x1="508" y1="394" x2="538" y2="394" class="arrow" stroke="#7aa2ff" marker-end="url(#mb)"/>
+  <line x1="754" y1="394" x2="784" y2="394" class="arrow" stroke="#f79e1b" marker-end="url(#mo)"/>
+  <line x1="1000" y1="394" x2="1030" y2="394" class="arrow" stroke="#7aa2ff" marker-end="url(#mb)"/>
+  <line x1="1246" y1="394" x2="1276" y2="394" class="arrow" stroke="#ff6b7a" marker-end="url(#mr)"/>
+  <line x1="1492" y1="394" x2="1522" y2="394" class="arrow" stroke="#3ddc84" marker-end="url(#mg)"/>
+  <line x1="1738" y1="394" x2="1768" y2="394" class="arrow" stroke="#3ddc84" marker-end="url(#mg)"/>
+
+  <!-- Legend -->
+  <g transform="translate(50 640)">
+    <text x="0" y="16" class="status t-green">REAL</text><text x="48" y="16" class="sub">runs live on XRPL EVM Testnet or in NEXXEN</text>
+    <text x="420" y="16" class="status t-amber">DEMO / SIMULATED</text><text x="560" y="16" class="sub">shown for the story, no real money</text>
+    <text x="850" y="16" class="status t-sky">SANDBOX-TESTED</text><text x="980" y="16" class="sub">Marqeta $1 card authorization, 0000 / PENDING (separate test, Oct 24)</text>
+  </g>
+  <g transform="translate(50 680)">
+    <rect width="160" height="30" rx="15" class="chip"/><circle cx="19" cy="15" r="7" fill="#eb001b"/><circle cx="29" cy="15" r="7" fill="#f79e1b" fill-opacity="0.92"/><text x="46" y="20" class="small">Mastercard AP4M</text>
+    <rect x="172" width="74" height="30" rx="15" class="chip"/><text x="209" y="20" text-anchor="middle" class="mono" style="fill:#eef2ff">x402</text>
+    <rect x="258" width="150" height="30" rx="15" class="chip"/><g transform="translate(277 15)" fill="none" stroke="#eef2ff" stroke-width="2" stroke-linecap="round"><path d="M-6 -5 C-2 -5 -2 0 0 0 C2 0 2 -5 6 -5"/><path d="M-6 5 C-2 5 -2 0 0 0 C2 0 2 5 6 5"/></g><text x="294" y="20" class="small">XRPL EVM Testnet</text>
+    <rect x="420" width="88" height="30" rx="15" class="chip"/><circle cx="439" cy="15" r="7" fill="none" stroke="#3ddc84" stroke-width="1.6"/><text x="454" y="20" class="small">RLUSD</text>
+    <rect x="520" width="116" height="30" rx="15" class="chip"/><rect x="535" y="7" width="11" height="16" rx="2" fill="none" stroke="#3ddc84" stroke-width="1.6"/><text x="554" y="20" class="small">Ledger Flex</text>
+    <rect x="648" width="114" height="30" rx="15" class="chip"/><circle cx="667" cy="14" r="5.5" fill="none" stroke="#3ddc84" stroke-width="1.8"/><path d="M671 18 L675 22" stroke="#3ddc84" stroke-width="1.8"/><text x="684" y="20" class="small">Quicknode</text>
+    <rect x="774" width="108" height="30" rx="15" class="chip"/><rect x="789" y="9" width="15" height="11" rx="2" fill="none" stroke="#6ec6ff" stroke-width="1.6"/><text x="812" y="20" class="small">Marqeta</text>
+  </g>
+</svg>
+</figure>
