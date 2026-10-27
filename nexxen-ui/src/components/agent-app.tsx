@@ -4,6 +4,7 @@ import { HomeLink } from "@/components/home-link";
 import { ActivityPanel } from "@/components/activity-panel";
 import { NetworkPage } from "@/components/network-page";
 import { StorePage, StoreWelcome } from "@/components/service-store";
+import { VirtualCardPanel } from "@/components/virtual-card/virtual-card-panel";
 import { WalletHeader } from "@/components/wallet-bar";
 import { APP } from "@/config/app";
 import {
@@ -44,6 +45,7 @@ export default function AgentApp() {
   return (
     <div className={`nx-shell nx-shell-${mode}`}>
       <WalletHeader mode={mode} />
+      <VirtualCardPanel />
       <div className="nx-shell-app">
     <AgentInterface
       llm={llm}
