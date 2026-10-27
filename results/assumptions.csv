@@ -1,0 +1,55 @@
+constant,value,unit,provenance,source_url,source_year,note
+AGENT_ADVANCED_API_SHARE,0.08,fraction of calls,EXAMPLE_INPUT,,,Share of agent RPC calls that hit Advanced APIs and so cost a 2x credit multiplier.
+AGENT_CREDIT_LIMIT_RLUSD,1000.0,RLUSD,EXAMPLE_INPUT,,,"Default agent cycle credit limit before human-approved exceptions. Sized against modelled appetite rather than picked freely: an active agent spends roughly 0.72 * 11 * exp(0.9) which is about 20 RLUSD per day, so about 594 RLUSD per 30 day cycle. At 1,000 RLUSD median utilisation lands near 60 percent. An earlier value of 250 left agents capped out mid-cycle, which made the cycle cap rather than the risk controls dominate every downstream result: declines exceeded settlements and utilisation pegged at 100 percent, flattening the credit score distribution."
+AGENT_DAILY_ACTIVE_PROB,0.72,probability/day,EXAMPLE_INPUT,,,Mean probability an AI agent transacts on a given day. Agents are far more active.
+AGENT_RPC_CALLS_PER_TX,28.0,RPC calls/transaction,EXAMPLE_INPUT,,,"Agents poll far more: channel state, voucher nonce, redemption receipts, retries. This is the dominant driver of Quicknode cost per agent."
+AGENT_SPEND_LOGNORM_MU,0.9,ln(RLUSD),EXAMPLE_INPUT,,,Lognormal mu for agent per-transaction spend. exp(0.9) is about 2.5 RLUSD: agents make many small machine payments rather than few large ones.
+AGENT_SPEND_LOGNORM_SIGMA,0.8,ln(RLUSD),EXAMPLE_INPUT,,,Lognormal sigma for agent per-transaction spend.
+AGENT_TX_PER_ACTIVE_DAY,11.0,transactions/active day,EXAMPLE_INPUT,,,Poisson mean transactions for an active agent.
+AIRDROP_CLAIM_PROB,0.4,probability,EXAMPLE_INPUT,,,Probability a human claims the NXS airdrop over the simulated year.
+BASE_REPAY_PROB,0.965,probability/cycle,EXAMPLE_INPUT,,,Baseline probability a participant repays a billing cycle on time.
+BILLING_CYCLE_DAYS,30.0,days,EXAMPLE_INPUT,,,Billing cycle length used for repayment and default accounting.
+CARBON_CREDIT_USD_PER_TONNE,20.0,USD/tonne CO2e,EXAMPLE_INPUT,,,Placeholder price for a verified carbon credit. Voluntary market prices vary by orders of magnitude across vintages and methodologies. No price is asserted here and none should be quoted from this model.
+CARBON_NEGATIVE_MULTIPLIER,1.1,ratio,EXAMPLE_INPUT,,,Retirement above gross emissions required to call activity carbon negative. 1.1 means retire 110 percent of emitted CO2e. Policy choice.
+COLLATERAL_RATIO_MEAN,1.35,ratio,EXAMPLE_INPUT,,,Mean RLUSD collateral held against the credit limit.
+CREDIT_COLLATERAL_TARGET_RATIO,1.5,ratio,EXAMPLE_INPUT,,,Collateral ratio scoring full marks. Above this adds nothing further.
+CREDIT_REF_BREACH_ATTEMPTS,12.0,attempts,EXAMPLE_INPUT,,,Breach attempts over the window that drive the anomaly component to zero.
+CREDIT_REF_CARBON_G_PER_SETTLED_TX,2.0,g CO2e/transaction,EXAMPLE_INPUT,,,Carbon per settled transaction scoring zero marks.
+CREDIT_REF_USD_PER_SETTLED_TX,0.004,USD/transaction,EXAMPLE_INPUT,,,Quicknode cost per settled transaction scoring zero marks. Costs at or above this are maximally penalised.
+CREDIT_SCORE_MAX,850.0,score,EXAMPLE_INPUT,,,Ceiling of the score range.
+CREDIT_SCORE_MIN,300.0,score,EXAMPLE_INPUT,,,"Floor of the score range, chosen to mirror familiar consumer scales."
+CREDIT_THIN_FILE_SCORE,600.0,score,EXAMPLE_INPUT,,,Score assigned when no billing cycle has been observed yet.
+CREDIT_W_ANOMALY,0.15,weight,EXAMPLE_INPUT,,,Weight on absence of anomaly and breach flags.
+CREDIT_W_COLLATERAL,0.15,weight,EXAMPLE_INPUT,,,Weight on RLUSD collateral ratio.
+CREDIT_W_COMPUTE,0.15,weight,EXAMPLE_INPUT,,,"Weight on compute efficiency, meaning Quicknode cost and carbon per settled transaction."
+CREDIT_W_REPAYMENT,0.35,weight,EXAMPLE_INPUT,,,Weight on on-time repayment share.
+CREDIT_W_UTILISATION,0.2,weight,EXAMPLE_INPUT,,,Weight on spend against cycle limit.
+DATACENTER_PUE,1.56,ratio,EXAMPLE_INPUT,,,Power usage effectiveness multiplier applied to RPC compute energy. Commonly quoted industry averages cluster near 1.5 to 1.6 but no primary source was read for this run. Replace with the operator's measured PUE.
+DATACENTER_WATER_INDIRECT_L_PER_KWH,4.52,L/kWh,UNVERIFIED,https://eta-publications.lbl.gov/sites/default/files/lbnl-1005775_v2.pdf,2024,"Indirect (power generation) water consumption per kWh of data centre electricity, same LBNL-attributed reporting. Dominates on-site water by roughly 12.6x. Not parsed from the primary PDF."
+DATACENTER_WATER_ONSITE_L_PER_KWH,0.36,L/kWh,UNVERIFIED,https://eta-publications.lbl.gov/sites/default/files/lbnl-1005775_v2.pdf,2024,"On-site data centre water consumption per kWh, attributed to the LBNL United States data centre energy usage reporting through 2023. Restated by secondary outlets; the LBNL PDF itself was not parsed for this run."
+DROPS_PER_XRP,1000000.0,drops/XRP,SOURCED,https://xrpl.org/basic-data-types.html,2026,"Protocol definition: 1 XRP is 1,000,000 drops."
+EVM_GAS_PER_CARD_TX,120000.0,gas units/transaction,EXAMPLE_INPUT,,,Assumed gas for one voucher redemption on the PaymentLedger contract. Order of magnitude for an ERC20 transfer plus event emission. Replace with measured gas from testnet receipts.
+EVM_GAS_PRICE_GWEI,10.0,gwei,EXAMPLE_INPUT,,,Assumed baseline sidechain gas price. Replace with observed testnet fee data.
+EVM_SIDECHAIN_CHAIN_ID,1449000.0,chain id,SOURCED,https://github.com/nexuswater/nexxen,2026,XRPL EVM Testnet chain id used by this repository's AP4M integration. Asserted in nexxen-ui/src/lib/ap4m/agent.ts.
+GRID_CO2E_KG_PER_KWH,0.394,kg CO2e/kWh,SOURCED,https://www.epa.gov/energy/greenhouse-gas-equivalencies-calculator-calculations-and-references,2024,"EPA Greenhouse Gas Equivalencies Calculator, national average baseload rate of 3.94e-4 metric tons CO2 per kWh after transmission and distribution losses, citing eGRID year 2022 data. A preliminary eGRID2024 figure of 0.341 kg/kWh circulates but EPA has not published it."
+HUMAN_APPROVAL_GRANT_PROB,0.35,probability,EXAMPLE_INPUT,,,Probability a human approves a requested over-limit exception. Humans keep approval authority; an unapproved breach never settles.
+HUMAN_CREDIT_LIMIT_RLUSD,2000.0,RLUSD,EXAMPLE_INPUT,,,Default human cycle credit limit.
+HUMAN_DAILY_ACTIVE_PROB,0.18,probability/day,EXAMPLE_INPUT,,,Mean probability a human participant transacts on a given day.
+HUMAN_RPC_CALLS_PER_TX,6.0,RPC calls/transaction,EXAMPLE_INPUT,,,"Balance reads, fee lookup, submission and receipt polling for a human-driven payment."
+HUMAN_SPEND_LOGNORM_MU,3.1,ln(RLUSD),EXAMPLE_INPUT,,,Lognormal mu for human per-transaction spend. exp(3.1) is about 22 RLUSD median.
+HUMAN_SPEND_LOGNORM_SIGMA,1.05,ln(RLUSD),EXAMPLE_INPUT,,,Lognormal sigma for human per-transaction spend. Produces a long right tail.
+HUMAN_TX_PER_ACTIVE_DAY,1.7,transactions/active day,EXAMPLE_INPUT,,,Poisson mean transactions for an active human.
+MISBEHAVING_AGENT_SHARE,0.02,fraction of agents,EXAMPLE_INPUT,,,Share of agents that attempt limit breaches and generate anomaly flags.
+MISBEHAVING_BREACH_ATTEMPT_PROB,0.22,probability/active day,EXAMPLE_INPUT,,,Probability a misbehaving agent attempts to exceed its per-transaction limit.
+OFFSET_SCENARIOS,3.0,scenarios,EXAMPLE_INPUT,,,"Three required scenarios: no offsets, partial at 50 percent of the required volume, and full at 100 percent of the required volume."
+PER_TX_LIMIT_FRACTION,0.1,fraction of cycle limit,EXAMPLE_INPUT,,,Per-transaction cap as a fraction of the cycle limit. Breaches need human approval.
+QUICKNODE_ADVANCED_API_MULTIPLIER,2.0,multiplier,SOURCED,https://www.quicknode.com/api-credits/eth,2026,"Advanced APIs (Trace, Debug, Token, NFT) apply a 2x credit multiplier."
+QUICKNODE_ANNUAL_DISCOUNT,0.15,fraction,SOURCED,https://www.quicknode.com/pricing,2026,Annual billing is 15 percent below monthly pricing.
+QUICKNODE_CREDITS_PER_EVM_CALL,20.0,API credits/call,SOURCED,https://www.quicknode.com/api-credits/eth,2026,Quicknode charges a flat 20 API credits for standard JSON-RPC methods on Ethereum and EVM-compatible chains. Per-method granularity is not published.
+QUICKNODE_PLANS,8.0,plan tiers,SOURCED,https://www.quicknode.com/pricing,2026,"Eight published tiers from Free to Business+ Tier 3, with included credits and per-1M overage rates. Enterprise is custom priced and excluded. Annual billing is stated as 15 percent below monthly."
+QUICKNODE_SPECIALIZED_MULTIPLIER,4.0,multiplier,SOURCED,https://www.quicknode.com/api-credits/eth,2026,Specialized calls such as txpool_content and trace_replayBlockTransactions apply a 4x credit multiplier.
+QUICKNODE_WATT_HOURS_PER_CREDIT,0.0005,Wh/API credit,EXAMPLE_INPUT,,,"Energy attributed to one API credit of RPC compute. Quicknode publishes no energy disclosure per credit, so this is a modelling placeholder and is the single largest uncertainty in the compute footprint. Sensitivity is reported in the summary."
+WATER_CREDIT_USD_PER_KL,0.45,USD/kilolitre,EXAMPLE_INPUT,,,Placeholder price for one verified water credit (WTR) representing one kilolitre of volumetric water benefit. Replace with contracted pricing after MRV verification.
+WATER_POSITIVE_MULTIPLIER,1.2,ratio,EXAMPLE_INPUT,,,"Replenishment above gross water consumption required to call activity water positive. 1.2 means restore 120 percent of litres consumed. This is a policy choice, not a measurement."
+XRPL_BASE_FEE_DROPS,10.0,drops/transaction,UNVERIFIED,https://xrpl.org/transaction-cost.html,2026,Standard XRPL reference transaction cost is 10 drops (0.00001 XRP). Long-standing protocol default; xrpl.org docs not re-fetched for this run.
+XRPL_ENERGY_KWH_PER_TX,0.0079,kWh/transaction,UNVERIFIED,https://www.bitget.com/news/detail/12560604949089,2026,"Widely restated figure for XRPL energy per transaction. Ripple's own sustainability pages assert carbon neutrality since October 2020 but publish no per-transaction kWh number, and learn.xrpl.org returned HTTP 403 when fetched. Primary study not read. Indicative only."

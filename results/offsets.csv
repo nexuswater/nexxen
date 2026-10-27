@@ -1,0 +1,4 @@
+scenario,coverage,gross_carbon_kg,gross_water_l,required_carbon_tonnes,required_wtr_kl,procured_carbon_tonnes,procured_wtr_kl,net_carbon_kg,net_water_l,carbon_negative,water_positive,total_cost_usd,claim_status
+none,0.0,476711.17561325454,5904442.987291072,524.38229317458,7085.331584749286,0.0,0.0,476711.17561325454,5904442.987291072,False,False,0.0,"proposed, pending independent MRV verification"
+partial,0.5,476711.17561325454,5904442.987291072,524.38229317458,7085.331584749286,262.19114658729,3542.665792374643,214520.02902596456,2361777.1949164285,False,False,6838.02253831439,"proposed, pending independent MRV verification"
+full,1.0,476711.17561325454,5904442.987291072,524.38229317458,7085.331584749286,524.38229317458,7085.331584749286,-47671.11756132543,-1180888.5974582145,True,True,13676.04507662878,"proposed, pending independent MRV verification"
