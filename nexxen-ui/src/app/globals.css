@@ -166,6 +166,17 @@ strong {
 .nxw-loading { color: var(--nxw-dim); font-size: 13px; padding: 14px 4px; }
 .nxw-identity, .nxw-stat { background: var(--nxw-card); border: 1px solid var(--nxw-line); border-radius: 14px; padding: 10px 14px; }
 .nxw-identity { display: flex; align-items: center; gap: 12px; min-width: 250px; }
+.nxw-identity-stack { flex-direction: column; align-items: stretch; gap: 8px; }
+.nxw-identity-row { display: flex; align-items: center; gap: 12px; }
+.nxw-pfp { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; display: block; flex-shrink: 0; background: #111; }
+.nxw-pfp-block { display: flex; flex-direction: column; gap: 6px; }
+.nxw-pfp-label { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--nxw-dim); }
+.nxw-pfp-picker { display: flex; flex-wrap: wrap; gap: 8px; }
+.nxw-pfp-choice { width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; border-radius: 10px; border: 1px solid var(--nxw-line); overflow: hidden; background: #111; }
+.nxw-pfp-choice img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nxw-pfp-choice[aria-pressed="true"] { box-shadow: inset 0 0 0 2px #21e46b; }
+.nxw-pfp-choice:focus-visible { outline: 2px solid #21e46b; outline-offset: 2px; }
+.nxw-pfp-note { font-size: 11px; color: var(--nxw-dim); max-width: 280px; }
 .nxw-avatar { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(135deg, rgba(235,0,27,.14), rgba(247,158,27,.18)); flex-shrink: 0; }
 .nxw-caption { font-size: 11px; color: var(--nxw-dim); text-transform: uppercase; letter-spacing: .06em; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .nxw-address { display: flex; align-items: center; gap: 8px; font: 600 15px ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 3px; }

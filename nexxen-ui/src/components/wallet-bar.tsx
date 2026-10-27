@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { AccountAvatar, DemoAvatarPicker } from "@/components/account-profile";
 
 type HistoryItem = {
   at: string;
@@ -111,56 +112,58 @@ export function WalletHeader({ mode }: { mode: "light" | "dark" }) {
   const { data, delta } = useWallet();
   const dialog = useRef<HTMLDialogElement>(null);
   const [copied, setCopied] = useState(false);
-
-  if (!data) {
-    return (
-      <header className={`nxw nxw-${mode}`}>
-        <div className="nxw-loading">Loading agent wallet…</div>
-      </header>
-    );
-  }
-  const { wallet, balance, history } = data;
-  const spentPct = Math.min(100, (Number(balance.spentRlusd) / Number(balance.budgetRlusd || 1)) * 100);
-  const lastBuy = history[0];
-
   const copy = () => {
-    navigator.clipboard?.writeText(wallet.address).then(() => {
+    if (!data) return;
+    navigator.clipboard?.writeText(data.wallet.address).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     });
   };
 
+  const profile = (
+    <div className="nxw-identity nxw-identity-stack">
+      <div className="nxw-identity-row">
+        <AccountAvatar />
+        {data ? (
+          <div>
+            <div className="nxw-caption">
+              Agent wallet
+              <span className={`nxw-badge nxw-badge-${data.wallet.mode}`}>
+                <span className="nxw-dot" />
+                {data.wallet.mode === "live" ? "Live · XRPL EVM Testnet" : "Demo · simulated"}
+              </span>
+            </div>
+            <div className="nxw-address">
+              {data.wallet.explorerUrl ? (
+                <a href={data.wallet.explorerUrl} target="_blank" rel="noreferrer" title={data.wallet.address}>
+                  {short(data.wallet.address)}
+                </a>
+              ) : (
+                <span title={data.wallet.address}>{short(data.wallet.address)}</span>
+              )}
+              <button className="nxw-icon-btn" onClick={copy} title="Copy address">
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="nxw-loading">Loading agent wallet…</div>
+        )}
+      </div>
+      <DemoAvatarPicker />
+    </div>
+  );
+
+  if (!data) {
+    return <header className={`nxw nxw-${mode}`}>{profile}</header>;
+  }
+  const { wallet, balance, history } = data;
+  const spentPct = Math.min(100, (Number(balance.spentRlusd) / Number(balance.budgetRlusd || 1)) * 100);
+  const lastBuy = history[0];
+
   return (
     <header className={`nxw nxw-${mode}`}>
-      <div className="nxw-identity">
-        <div className="nxw-avatar" aria-hidden>
-          <svg width="22" height="14" viewBox="0 0 24 14">
-            <circle cx="7" cy="7" r="7" fill="#eb001b" />
-            <circle cx="17" cy="7" r="7" fill="#f79e1b" fillOpacity="0.9" />
-          </svg>
-        </div>
-        <div>
-          <div className="nxw-caption">
-            Agent wallet
-            <span className={`nxw-badge nxw-badge-${wallet.mode}`}>
-              <span className="nxw-dot" />
-              {wallet.mode === "live" ? "Live · XRPL EVM Testnet" : "Demo · simulated"}
-            </span>
-          </div>
-          <div className="nxw-address">
-            {wallet.explorerUrl ? (
-              <a href={wallet.explorerUrl} target="_blank" rel="noreferrer" title={wallet.address}>
-                {short(wallet.address)}
-              </a>
-            ) : (
-              <span title={wallet.address}>{short(wallet.address)}</span>
-            )}
-            <button className="nxw-icon-btn" onClick={copy} title="Copy address">
-              {copied ? "Copied" : "Copy"}
-            </button>
-          </div>
-        </div>
-      </div>
+      {profile}
 
       <div className="nxw-stat">
         <div className="nxw-caption">RLUSD available</div>

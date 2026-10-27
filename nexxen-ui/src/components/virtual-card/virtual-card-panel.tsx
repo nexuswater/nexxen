@@ -1,36 +1,51 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import { NEXUS_WATER_LOGO } from "@/fixtures/demo-avatars";
 import {
   MARQETA_SANDBOX_VIRTUAL_CARD,
   formatExpiration,
   groupPan,
   maskPan,
 } from "@/fixtures/marqeta-sandbox-virtual-card";
-import {
-  ContactlessIcon,
-  EmvChip,
-  MastercardPlaceholder,
-  NexusWaterMark,
-  PixelPunkAvatar,
-} from "@/components/virtual-card/virtual-card-marks";
+import { useShownAvatar } from "@/components/use-shown-avatar";
+import { ContactlessIcon, EmvChip, MastercardPlaceholder } from "@/components/virtual-card/virtual-card-marks";
 import "./virtual-card.css";
 
 type Face = "front" | "back";
 
 const card = MARQETA_SANDBOX_VIRTUAL_CARD;
 
-function flipLabel(face: Face, showDetails: boolean, frozen: boolean) {
+function flipLabel(face: Face, showDetails: boolean, frozen: boolean, avatarLabel: string) {
   const side = face === "front" ? "front" : "back";
   const next = face === "front" ? "back" : "front";
   const digits = showDetails
     ? "Sandbox sample digits are visible."
     : `Only the last four digits ${card.lastFour} are visible.`;
   const ice = frozen ? " Shown frozen, visual only." : "";
-  return `Sandbox virtual card, ${side}. Cardholder ${card.cardholderName}. ${digits}${ice} Activate to flip to the ${next}.`;
+  return `Sandbox virtual card, ${side}. Nexus Water. NEXXEN. Cardholder ${card.cardholderName}. Avatar ${avatarLabel}. ${digits}${ice} Activate to flip to the ${next}.`;
+}
+
+function BrandLockup() {
+  return (
+    <span className="nvc-brand">
+      <Image
+        className="nvc-logo"
+        src={NEXUS_WATER_LOGO.src}
+        alt=""
+        width={32}
+        height={32}
+        unoptimized
+        draggable={false}
+      />
+      <span className="nvc-wordmark">NEXXEN</span>
+    </span>
+  );
 }
 
 export function VirtualCardPanel() {
+  const shown = useShownAvatar();
   const [face, setFace] = useState<Face>("front");
   const [showDetails, setShowDetails] = useState(false);
   const [frozen, setFrozen] = useState(false);
@@ -88,17 +103,14 @@ export function VirtualCardPanel() {
               data-frozen={frozen ? "true" : "false"}
               data-details={showDetails ? "true" : "false"}
               aria-pressed={face === "back"}
-              aria-label={flipLabel(face, showDetails, frozen)}
+              aria-label={flipLabel(face, showDetails, frozen, shown.label)}
               onClick={flip}
             >
               <span className="nvc-card-inner">
                 <span className="nvc-face nvc-front">
                   <span className="nvc-face-body">
                     <span className="nvc-front-top">
-                      <span className="nvc-brand">
-                        <NexusWaterMark />
-                        <span className="nvc-wordmark">NEXXEN</span>
-                      </span>
+                      <BrandLockup />
                       <span className="nvc-front-marks">
                         <ContactlessIcon />
                         <span className="nvc-badge">Testnet</span>
@@ -113,7 +125,7 @@ export function VirtualCardPanel() {
                     {showDetails ? <span className="nvc-reveal-flag">{card.sourceLabel}</span> : null}
                     <span className="nvc-front-bottom">
                       <span className="nvc-holder">
-                        <PixelPunkAvatar />
+                        <Image className="nvc-avatar" src={shown.src} alt="" width={36} height={36} unoptimized draggable={false} />
                         <span className="nvc-holder-copy">
                           <span className="nvc-holder-kicker">Cardholder</span>
                           <span className="nvc-holder-name">{card.cardholderName}</span>
@@ -142,10 +154,7 @@ export function VirtualCardPanel() {
                       <span className="nvc-sample-tag">sample</span>
                     </span>
                     <span className="nvc-back-bottom">
-                      <span className="nvc-brand">
-                        <NexusWaterMark />
-                        <span className="nvc-wordmark">NEXXEN</span>
-                      </span>
+                      <BrandLockup />
                       <span className="nvc-badge">Testnet</span>
                     </span>
                     <span className="nvc-back-note">Sample preview. Not a payment instrument.</span>
