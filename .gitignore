@@ -3,3 +3,10 @@ node_modules/
 .DS_Store
 /.env
 /.env.*
+
+# Python simulation (sim/). Generated outputs in results/ are committed on
+# purpose so a draft PR is reviewable without running the model.
+__pycache__/
+*.py[cod]
+.venv*/
+.pytest_cache/
